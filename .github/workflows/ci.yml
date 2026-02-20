@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Sets up uv (automatically caches using uv.lock)
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Install main and dev dependencies (including your linters) strictly from uv.lock
+      - name: Install dependencies
+        run: uv sync
+
+      # uv run executes the linters using the locked versions in your environment
+      - name: Run black
+        run: uv run black --check .
+
+      - name: Run isort
+        run: uv run isort --check-only .
+
+      - name: Run flake8
+        run: uv run flake8 .
+
+  test:
+    name: Test Application
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # uv sync reads uv.lock and installs your main + dev dependencies
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests
+        env:
+          # IMPORTANT: Update this to match your project's settings path!
+          DJANGO_SETTINGS_MODULE: config.settings.local
+          DJANGO_SECRET_KEY: test-secret-key-for-ci-only
+          DB_NAME: test_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+        # uv run executes pytest inside the isolated environment created by uv sync
+        run: uv run pytest
