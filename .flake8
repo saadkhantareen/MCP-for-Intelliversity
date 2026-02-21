@@ -1,0 +1,26 @@
+[flake8]
+# Keep flake8 out of virtual environments and caches
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .mypy_cache,
+    .pytest_cache,
+    .tox,
+    build,
+    dist,
+    */migrations/*
+
+# Match common formatter defaults
+max-line-length = 88
+
+# Ignore long lines in docstrings, unused imports, long lines
+ignore = D203, F401, E501
+
+
+
+# Allow Django settings pattern: "from ... import *"
+per-file-ignores =
+    config/settings/*.py:F403,F405
