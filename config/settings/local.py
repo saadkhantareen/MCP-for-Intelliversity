@@ -10,11 +10,11 @@ ALLOWED_HOSTS = ["*"]
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("Saas_DB", "telehealth_db"),
-        "USER": env("POSTGRES_USER", "telehealth_user"),
-        "PASSWORD": env("POSTGRES_PASSWORD", "telehealth_pass"),
-        "HOST": env("POSTGRES_HOST", "db"),
-        "PORT": env("POSTGRES_PORT", "5432"),
+        "NAME": env("MAIN_POSTGRES_DB", default="intelliversity_main_db"),
+        "USER": env("MAIN_POSTGRES_USER", default="intelliversity_user"),
+        "PASSWORD": env("MAIN_POSTGRES_PASSWORD", default="intelliversity_main_pass"),
+        "HOST": env("MAIN_POSTGRES_HOST", default="db"),
+        "PORT": env.int("MAIN_POSTGRES_PORT", default="5432"),
     }
 }
 

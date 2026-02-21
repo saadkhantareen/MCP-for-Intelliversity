@@ -49,9 +49,6 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "corsheaders",
     "health_check",
-    "health_check.db",
-    "health_check.cache",
-    "health_check.storage",
 ]
 
 PROJECT_APPS = [
@@ -113,10 +110,10 @@ REST_FRAMEWORK = {
 # JWT Settings
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=env("ACCESS_TOKEN_LIFETIME", default="60")
+        minutes=int(env("ACCESS_TOKEN_LIFETIME", default="60"))
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=env("REFRESH_TOKEN_LIFETIME", default="1")
+        days=int(env("REFRESH_TOKEN_LIFETIME", default="1"))
     ),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -158,7 +155,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-AUTH_USER_MODEL = "users.User"
+# AUTH_USER_MODEL = "users.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/

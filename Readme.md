@@ -15,6 +15,11 @@ uv add -r requirements/local.txt
 Then run
 `django-admin startproject config .`
 
+Before pushing to branch, 
+run:
+`black .`
+`isort .`
+`flake8 .`
 
 
 
