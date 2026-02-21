@@ -80,6 +80,7 @@ jobs:
           # IMPORTANT: Update this to match your project's settings path!
           DJANGO_SETTINGS_MODULE: config.settings.local
           DJANGO_SECRET_KEY: test-secret-key-for-ci-only
+          DEBUG: false
           DB_NAME: test_db
           DB_USER: postgres
           DB_PASSWORD: postgres
