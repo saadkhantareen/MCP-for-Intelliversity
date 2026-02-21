@@ -81,10 +81,10 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings.local
           DJANGO_SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: false
-          DB_NAME: test_db
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_HOST: localhost
-          DB_PORT: 5432
+          MAIN_POSTGRES_DB: test_db
+          MAIN_POSTGRES_USER: postgres
+          MAIN_POSTGRES_PASSWORD: postgres
+          MAIN_POSTGRES_HOST: localhost
+          MAIN_POSTGRES_PORT: 5432
         # uv run executes pytest inside the isolated environment created by uv sync
         run: uv run pytest
