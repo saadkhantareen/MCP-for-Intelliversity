@@ -1,7 +1,9 @@
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-from config.settings.base import *
 import dj_database_url
+
+from config.settings.base import *
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG", default=False)
 

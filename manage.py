@@ -6,6 +6,7 @@ import sys
 
 from config.setup_environment import setup_environment
 
+
 def main():
     """Run administrative tasks."""
     setup_environment()
