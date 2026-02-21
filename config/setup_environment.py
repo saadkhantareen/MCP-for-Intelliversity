@@ -7,7 +7,8 @@ def setup_environment():
 
     if environment not in environment_supported:
         raise Exception(
-            f'Please set environment variable APP_ENV from {environment_supported}')
+            f"Please set environment variable APP_ENV from {environment_supported}"
+        )
 
     settings_mapping = {
         "production": "config.settings.production",
