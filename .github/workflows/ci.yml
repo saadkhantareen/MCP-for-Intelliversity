@@ -78,13 +78,16 @@ jobs:
       - name: Run tests
         env:
           # IMPORTANT: Update this to match your project's settings path!
-          DJANGO_SETTINGS_MODULE: config.settings.local
+          DJANGO_SETTINGS_MODULE: intelliversity.settings
           DJANGO_SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: false
+          ALLOWED_HOSTS: localhost,127.0.0.1
           MAIN_POSTGRES_DB: test_db
           MAIN_POSTGRES_USER: postgres
           MAIN_POSTGRES_PASSWORD: postgres
           MAIN_POSTGRES_HOST: localhost
           MAIN_POSTGRES_PORT: 5432
+          DB_CONN_MAX_AGE: 0
+          DB_SSL_MODE: disable
         # uv run executes pytest inside the isolated environment created by uv sync
         run: uv run pytest

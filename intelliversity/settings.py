@@ -32,7 +32,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 DEBUG = env("DEBUG")
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost"])
 
 
 # Application definition
@@ -100,8 +100,17 @@ ASGI_APPLICATION = "intelliversity.asgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("MAIN_POSTGRES_DB", default="intelliversity_main_db"),
+        "USER": env("MAIN_POSTGRES_USER", default="intelliversity_user"),
+        "PASSWORD": env("MAIN_POSTGRES_PASSWORD", default="intelliversity_main_pass"),
+        "HOST": env("MAIN_POSTGRES_HOST", default="db"),
+        "PORT": env.int("MAIN_POSTGRES_PORT", default="5432"),
+        "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=60),
+        "OPTIONS": {
+            "sslmode": env("DB_SSL_MODE", default="require"),
+            "connect_timeout": env.int("DB_CONNECT_TIMEOUT", default=10),
+        },
     }
 }
 
@@ -143,6 +152,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = env(
+    "STATICFILES_STORAGE",
+    default="django.contrib.staticfiles.storage.StaticFilesStorage",
+)
 
 
 # Django REST Framework
@@ -186,3 +199,22 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
 }
+
+
+# CORS
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=False)
+
+# Security
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
+SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
+SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=True)
+X_FRAME_OPTIONS = env("X_FRAME_OPTIONS", default="DENY")
+
+# Email backend
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.smtp.EmailBackend",
+)
