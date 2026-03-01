@@ -5,6 +5,8 @@ from django.utils.translation import gettext_lazy as _
 class UserManager(BaseUserManager):
     """Custom manager that uses email as the unique identifier instead of a username."""
 
+    use_in_migrations = True
+
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError(_("The Email address must be set"))
