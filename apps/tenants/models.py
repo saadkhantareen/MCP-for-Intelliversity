@@ -1,4 +1,5 @@
 from django.db import models
+
 from apps.base_models import BaseModel
 
 

@@ -1,6 +1,7 @@
+import logging
 import os
 import threading
-import logging
+
 from django.conf import settings
 from django.db import connections
 

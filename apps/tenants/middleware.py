@@ -1,9 +1,11 @@
 import logging
-from django.http import JsonResponse
-from apps.tenants.models import University
-from apps.tenants.context import set_current_tenant, clear_current_tenant
-from apps.tenants.utils.db_utils import ensure_tenant_db_configured
+
 from django.conf import settings
+from django.http import JsonResponse
+
+from apps.tenants.context import clear_current_tenant, set_current_tenant
+from apps.tenants.models import University
+from apps.tenants.utils.db_utils import ensure_tenant_db_configured
 
 logger = logging.getLogger(__name__)
 
