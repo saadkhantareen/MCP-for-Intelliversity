@@ -15,7 +15,6 @@ class TenantMiddleware:
         self.get_response = get_response
 
         self.EXCLUDED_PATHS = [
-            "/",
             "/admin/",
         ]
 
