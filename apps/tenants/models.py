@@ -22,4 +22,4 @@ class University(BaseModel):
 
     @property
     def db_alias(self):
-        return f"tenant_{self.subdomain}"
+        return f"intelliversity_{self.subdomain}"

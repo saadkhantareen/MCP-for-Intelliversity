@@ -15,6 +15,8 @@ class TenantMiddleware:
         self.get_response = get_response
 
         self.EXCLUDED_PATHS = [
+            "/api/v1/docs",
+            "/api/v1/schema",
             "/admin/",
         ]
 
