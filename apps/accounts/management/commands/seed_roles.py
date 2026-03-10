@@ -37,7 +37,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Creating roles for {university.name}...")
 
             # create groups
-            for role in ["admin", "faculty", "student"]:
+            for role in ["Admin", "Faculty", "Student"]:
                 Group.objects.using(db_key).get_or_create(name=role)
 
             self.stdout.write(

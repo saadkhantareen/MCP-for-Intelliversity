@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from apps.users.serializers import RegisterSerializer, LoginSerializer
+from apps.accounts.serializers import RegisterSerializer, LoginSerializer
 
 
 class RegisterView(APIView):
@@ -19,7 +19,7 @@ class RegisterView(APIView):
         serializer.save()
 
         return Response(
-            serializer.validated_data,
+            serializer.data,
             status=status.HTTP_201_CREATED,
         )
 

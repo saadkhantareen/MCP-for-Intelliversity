@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from apps.base_models import BaseModel
-from apps.users.manager import UserManager
+from apps.accounts.manager import UserManager
 
 
 class User(BaseModel, AbstractBaseUser, PermissionsMixin):
