@@ -17,6 +17,7 @@ class TenantMiddleware:
         self.EXCLUDED_PATHS = [
             "/api/v1/docs",
             "/api/v1/schema",
+            "/api/v1/redoc",
             "/admin/",
         ]
 

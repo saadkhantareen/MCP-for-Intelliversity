@@ -8,7 +8,6 @@ from apps.accounts.serializers import LoginSerializer, RegisterSerializer
 
 class RegisterView(APIView):
     """
-    POST /api/auth/register/
     Create a new user account. Returns JWT tokens on success.
     """
 
@@ -27,7 +26,6 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     """
-    POST /api/auth/login/
     Authenticate with email + password. Returns JWT tokens on success.
     """
 

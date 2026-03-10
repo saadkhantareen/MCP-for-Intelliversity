@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.auth.models import Group
-from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from apps.tenants.models import University
@@ -37,7 +36,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Creating roles for {university.name}...")
 
             # create groups
-            for role in ["Admin", "Faculty", "Student"]:
+            for role in ["admin", "faculty", "student"]:
                 Group.objects.using(db_key).get_or_create(name=role)
 
             self.stdout.write(
