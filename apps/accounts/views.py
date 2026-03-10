@@ -2,7 +2,8 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from apps.accounts.serializers import RegisterSerializer, LoginSerializer
+
+from apps.accounts.serializers import LoginSerializer, RegisterSerializer
 
 
 class RegisterView(APIView):

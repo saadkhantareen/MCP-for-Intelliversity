@@ -1,10 +1,10 @@
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
-from apps.tenants.utils.db_utils import build_tenant_db_config
-from django.contrib.auth.models import Group
 
 from apps.tenants.models import University
+from apps.tenants.utils.db_utils import build_tenant_db_config
 
 
 class Command(BaseCommand):
