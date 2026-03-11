@@ -223,3 +223,7 @@ EMAIL_BACKEND = ENV(
 )
 
 ROOT_DOMAINS = set(ENV.list("ROOT_DOMAINS", default=["localhost", "127.0.0.1"]))
+
+# Frontend for forget-password
+FRONTEND_BASE_DOMAIN = ENV("FRONTEND_BASE_DOMAIN", default="localhost")
+FRONTEND_PORT = ENV.int("FRONTEND_PORT", default="3000")
