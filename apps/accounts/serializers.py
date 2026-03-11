@@ -1,11 +1,12 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.choices import Roles
-from apps.accounts.models import User
+
+User = get_user_model()
 
 
 class GroupSerializer(serializers.ModelSerializer):

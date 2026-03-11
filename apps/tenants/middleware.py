@@ -1,5 +1,3 @@
-import logging
-
 from django.conf import settings
 from django.http import JsonResponse
 
@@ -7,77 +5,74 @@ from apps.tenants.context import clear_current_tenant, set_current_tenant
 from apps.tenants.models import University
 from apps.tenants.utils.db_utils import ensure_tenant_db_configured
 
-logger = logging.getLogger(__name__)
-
 
 class TenantMiddleware:
+
     def __init__(self, get_response):
         self.get_response = get_response
 
-        self.EXCLUDED_PATHS = [
-            "/api/v1/docs",
-            "/api/v1/schema",
-            "/api/v1/redoc",
-            "/admin/",
-        ]
-
     def __call__(self, request):
-        is_global_request = any(
-            request.path.startswith(path) for path in self.EXCLUDED_PATHS
-        )
-        tenant = self._resolve_tenant(request)
 
-        if tenant is None and not is_global_request:
-            return JsonResponse({"error": "Tenant not found or inactive."}, status=404)
+        host = request.get_host().split(":")[0].lower()
 
-        if tenant:
-            ensure_tenant_db_configured(tenant)
-            # Store in thread-local so the router can access it
-            set_current_tenant(tenant)
-        else:
-            set_current_tenant(None)
+        if host in settings.ROOT_DOMAINS:
+            request.portal = None
+            request.university = None
+            return self.get_response(request)
 
-        request.tenant = tenant  # attach to request for views
+        portal, university = self._resolve_portal_and_university(host)
+
+        if portal is None:
+            return JsonResponse({"detail": "Invalid portal."}, status=400)
+
+        if university is None:
+            return JsonResponse(
+                {"detail": "University not found or inactive."},
+                status=404,
+            )
+
+        request.portal = portal
+        request.university = university
+
+        ensure_tenant_db_configured(university)
+        set_current_tenant(university)
 
         try:
             response = self.get_response(request)
         finally:
-            # ALWAYS clear after request — prevents tenant bleed between requests
             clear_current_tenant()
 
         return response
 
-    def _resolve_tenant(self, request):
+    def _resolve_portal_and_university(self, host):
         """
-        Dev: Token-based identification
-        Prod: Subdomain-based identification
+        Resolve:
+        student.fast.intelliversity.com
+        student.fast.localhost
         """
 
-        if settings.DEBUG:
-            return self._resolve_from_token(request)
-        else:
-            return self._resolve_from_subdomain(request)
+        parts = host.split(".")
 
-    def _resolve_from_token(self, request):
-        """For local development — pass X-Tenant-Token in headers."""
-        subdomain_from_header = request.headers.get("X-Tenant-Token")
-        if not subdomain_from_header:
-            return None
-        try:
-            return University.objects.using("default").get(
-                subdomain=subdomain_from_header, is_active=True
-            )
-        except University.DoesNotExist:
-            return None
+        if len(parts) < 3:
+            return None, None
 
-    def _resolve_from_subdomain(self, request):
-        """For production — extract tenant from subdomain."""
-        host = request.get_host().split(":")[0].lower()
-        subdomain = host.split(".")[1]
+        portal_name = parts[0]
+        university_subdomain = parts[1]
 
         try:
-            return University.objects.using("default").get(
-                subdomain=subdomain, is_active=True
+            university = (
+                University.objects.using("default")
+                .prefetch_related("portals")
+                .get(subdomain=university_subdomain, is_active=True)
             )
         except University.DoesNotExist:
-            return None
+            return portal_name, None
+
+        portal_exists = university.portals.filter(
+            name=portal_name, is_active=True
+        ).exists()
+
+        if not portal_exists:
+            return None, university
+
+        return portal_name, university

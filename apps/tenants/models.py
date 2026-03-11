@@ -1,6 +1,7 @@
 from django.db import models
 
 from apps.base_models import BaseModel
+from apps.tenants.choices import PortalType
 
 
 class University(BaseModel):
@@ -14,6 +15,8 @@ class University(BaseModel):
 
     is_active = models.BooleanField(default=True)
 
+    portals = models.ManyToManyField("Portal", related_name="universities")
+
     class Meta:
         app_label = "tenants"
 
@@ -23,3 +26,11 @@ class University(BaseModel):
     @property
     def db_alias(self):
         return f"intelliversity_{self.subdomain}"
+
+
+class Portal(BaseModel):
+    name = models.CharField(choices=PortalType.choices, max_length=50, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name

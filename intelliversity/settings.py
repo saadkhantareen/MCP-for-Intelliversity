@@ -221,3 +221,5 @@ EMAIL_BACKEND = ENV(
     "EMAIL_BACKEND",
     default="django.core.mail.backends.smtp.EmailBackend",
 )
+
+ROOT_DOMAINS = set(ENV.list("ROOT_DOMAINS", default=["localhost", "127.0.0.1"]))
