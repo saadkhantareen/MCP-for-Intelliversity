@@ -15,14 +15,17 @@ class TenantMiddleware:
 
         host = request.get_host().split(":")[0].lower()
 
+        # Prevents tenant context from leaking between requests in the same worker/thread
+        clear_current_tenant()
+
         if host in settings.ROOT_DOMAINS:
             request.portal = None
             request.university = None
             return self.get_response(request)
 
-        portal, university = self._resolve_portal_and_university(host)
+        portal_name, university = self._resolve_portal_and_university(host)
 
-        if portal is None:
+        if portal_name is None:
             return JsonResponse({"detail": "Invalid portal."}, status=400)
 
         if university is None:
@@ -31,7 +34,7 @@ class TenantMiddleware:
                 status=404,
             )
 
-        request.portal = portal
+        request.portal_name = portal_name
         request.university = university
 
         ensure_tenant_db_configured(university)
@@ -60,10 +63,8 @@ class TenantMiddleware:
         university_subdomain = parts[1]
 
         try:
-            university = (
-                University.objects.using("default")
-                .prefetch_related("portals")
-                .get(subdomain=university_subdomain, is_active=True)
+            university = University.objects.using("default").get(
+                subdomain=university_subdomain, is_active=True
             )
         except University.DoesNotExist:
             return portal_name, None

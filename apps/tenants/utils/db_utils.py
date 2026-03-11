@@ -58,3 +58,15 @@ def ensure_tenant_db_configured(tenant):
         connections.databases[alias] = config
 
     return alias
+
+
+def close_tenant_db_connection(alias):
+    """
+    Safely closes a tenant database connection if it exists.
+    """
+    try:
+        if alias in connections:
+            connections[alias].close()
+            logger.debug(f"Closed connection for tenant DB: {alias}")
+    except Exception as e:
+        logger.warning(f"Failed to close connection for {alias}: {str(e)}")

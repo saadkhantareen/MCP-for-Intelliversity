@@ -79,5 +79,5 @@ class LoginSerializer(serializers.Serializer):
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
             },
-            "university": request.tenant.name,
+            "university": request.university.name,
         }

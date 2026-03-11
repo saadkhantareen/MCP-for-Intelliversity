@@ -3,7 +3,10 @@ from django.core.management.base import BaseCommand
 from django.db import connections
 
 from apps.tenants.models import University
-from apps.tenants.utils.db_utils import ensure_tenant_db_configured
+from apps.tenants.utils.db_utils import (
+    close_tenant_db_connection,
+    ensure_tenant_db_configured,
+)
 
 
 class Command(BaseCommand):
@@ -28,9 +31,9 @@ class Command(BaseCommand):
     help = "Run migrations for all tenant databases"
 
     def handle(self, *args, **kwargs):
-        tenants = University.objects.using("default").all()
+        universities = University.objects.using("default").all()
 
-        if not tenants.exists():
+        if not universities.exists():
             self.stdout.write(
                 self.style.WARNING(
                     "No tenants found. Add universities first via admin panel."
@@ -39,10 +42,11 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(
-            f"Found {tenants.count()} tenant(s). Starting migrations...\n"
+            f"Found {universities.count()} tenant(s). Starting migrations...\n"
         )
 
-        for university in tenants:
+        for university in universities:
+            db_key = None
             try:
                 db_key = ensure_tenant_db_configured(university)
                 connections[db_key].ensure_connection()
@@ -61,5 +65,9 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.ERROR(f"{university.name} failed: {str(e)}\n")
                 )
+
+            finally:
+                if db_key:
+                    close_tenant_db_connection(alias=db_key)
 
         self.stdout.write(self.style.SUCCESS("All tenant migrations completed."))
