@@ -3,9 +3,9 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts.views import (
     LoginView,
-    RegisterView,
-    PasswordResetRequestView,
     PasswordResetConfirmView,
+    PasswordResetRequestView,
+    RegisterView,
 )
 
 urlpatterns = [

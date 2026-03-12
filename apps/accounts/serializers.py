@@ -1,16 +1,16 @@
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db import transaction
-from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
-from django.conf import settings
-from django.core.mail import send_mail
-from django.contrib.auth.tokens import default_token_generator
-from apps.accounts.validators import validate_strong_password, validate_university_email
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from apps.accounts.choices import Roles
+from apps.accounts.validators import validate_strong_password, validate_university_email
 
 User = get_user_model()
 
@@ -150,7 +150,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
             subject="Password Reset Request",
             message=(
                 f"Hello {user.first_name},\n\n"
-                f"Please click the link below to reset your password:\n\n"
+                f"Please click the link below to reset your password within 15 mins:\n\n"
                 f"{reset_link}\n\n"
                 f"If you didn't request this, please ignore this email."
             ),

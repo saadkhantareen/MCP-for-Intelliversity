@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 
 from apps.accounts.serializers import (
     LoginSerializer,
-    RegisterSerializer,
-    PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    RegisterSerializer,
 )
 
 
