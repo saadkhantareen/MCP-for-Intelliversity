@@ -65,9 +65,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(validators=[validate_university_email])
-    password = serializers.CharField(
-        write_only=True, validators=[validate_strong_password]
-    )
+    password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         request = self.context.get("request")
@@ -123,7 +121,9 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         university = getattr(request, "university", None)
 
         if not portal_name or not university:
-            raise ValueError("Tenant info missing in request")
+            raise serializers.ValidationError(
+                {"detail": "Tenant info missing in request."}
+            )
 
         scheme = "https" if not settings.DEBUG else "http"
         base_domain = settings.FRONTEND_BASE_DOMAIN
@@ -159,7 +159,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
             subject="Password Reset Request",
             message=(
                 f"Hello {user.first_name},\n\n"
-                f"Please click the link below to reset your password within 15 mins:\n\n"
+                f"Please click the link below to reset your password.:\n\n"
                 f"{reset_link}\n\n"
                 f"If you didn't request this, please ignore this email."
             ),
