@@ -19,7 +19,7 @@ class TenantMiddleware:
         clear_current_tenant()
 
         if host in settings.ROOT_DOMAINS:
-            request.portal = None
+            request.portal_name = None
             request.university = None
             return self.get_response(request)
 

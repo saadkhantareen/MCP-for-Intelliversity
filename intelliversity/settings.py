@@ -205,7 +205,9 @@ SPECTACULAR_SETTINGS = {
 
 
 # CORS
-CORS_ALLOWED_ORIGINS = ENV.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGIN_REGEXES = ENV.list(
+    "CORS_ALLOWED_ORIGIN_REGEXES", default=["https?://(.*\.)?localhost(:\d+)?$"]
+)
 CORS_ALLOW_CREDENTIALS = ENV.bool("CORS_ALLOW_CREDENTIALS", default=False)
 
 # Security

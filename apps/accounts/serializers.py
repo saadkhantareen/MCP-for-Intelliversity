@@ -81,6 +81,15 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError({"detail": "Account is disabled."})
 
+        portal_role = request.portal_name
+
+        user_roles = list(user.groups.values_list("name", flat=True))
+
+        if not portal_role or portal_role not in user_roles:
+            raise serializers.ValidationError(
+                {"detail": f"Invalid credentials {portal_role} portal."}
+            )
+
         refresh = RefreshToken.for_user(user)
         roles = list(user.groups.values_list("name", flat=True))
 
