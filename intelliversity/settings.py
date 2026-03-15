@@ -15,7 +15,7 @@ from pathlib import Path
 
 import environ
 
-env = environ.Env()
+ENV = environ.Env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,13 +26,13 @@ environ.Env.read_env(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("DJANGO_SECRET_KEY")
+SECRET_KEY = ENV("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG")
+DEBUG = ENV.bool("DEBUG")
 
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost"])
+ALLOWED_HOSTS = ENV.list("ALLOWED_HOSTS", default=["localhost"])
 
 
 # Application definition
@@ -56,8 +56,8 @@ THIRD_PARTY_APPS = [
 ]
 
 PROJECT_APPS = [
-    "apps.users",
     "apps.tenants",
+    "apps.accounts",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
@@ -102,15 +102,15 @@ ASGI_APPLICATION = "intelliversity.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("MAIN_POSTGRES_DB", default="intelliversity_main_db"),
-        "USER": env("MAIN_POSTGRES_USER", default="intelliversity_user"),
-        "PASSWORD": env("MAIN_POSTGRES_PASSWORD", default="intelliversity_main_pass"),
-        "HOST": env("MAIN_POSTGRES_HOST", default="db"),
-        "PORT": env.int("MAIN_POSTGRES_PORT", default="5432"),
-        "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=60),
+        "NAME": ENV("MAIN_POSTGRES_DB", default="intelliversity_main_db"),
+        "USER": ENV("MAIN_POSTGRES_USER", default="intelliversity_user"),
+        "PASSWORD": ENV("MAIN_POSTGRES_PASSWORD", default="intelliversity_main_pass"),
+        "HOST": ENV("MAIN_POSTGRES_HOST", default="db"),
+        "PORT": ENV.int("MAIN_POSTGRES_PORT", default="5432"),
+        "CONN_MAX_AGE": ENV.int("DB_CONN_MAX_AGE", default=60),
         "OPTIONS": {
-            "sslmode": env("DB_SSL_MODE", default="require"),
-            "connect_timeout": env.int("DB_CONNECT_TIMEOUT", default=10),
+            "sslmode": ENV("DB_SSL_MODE", default="require"),
+            "connect_timeout": ENV.int("DB_CONNECT_TIMEOUT", default=10),
         },
     }
 }
@@ -136,7 +136,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "accounts.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -155,7 +155,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = env(
+STATICFILES_STORAGE = ENV(
     "STATICFILES_STORAGE",
     default="django.contrib.staticfiles.storage.StaticFilesStorage",
 )
@@ -178,10 +178,10 @@ REST_FRAMEWORK = {
 # JWT Settings
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=int(env("ACCESS_TOKEN_LIFETIME", default="60"))
+        minutes=int(ENV("ACCESS_TOKEN_LIFETIME", default="60"))
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=int(env("REFRESH_TOKEN_LIFETIME", default="1"))
+        days=int(ENV("REFRESH_TOKEN_LIFETIME", default="1"))
     ),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -205,19 +205,21 @@ SPECTACULAR_SETTINGS = {
 
 
 # CORS
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
-CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=False)
+CORS_ALLOWED_ORIGINS = ENV.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOW_CREDENTIALS = ENV.bool("CORS_ALLOW_CREDENTIALS", default=False)
 
 # Security
-SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
-SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
-SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
-SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=True)
-X_FRAME_OPTIONS = env("X_FRAME_OPTIONS", default="DENY")
+SECURE_SSL_REDIRECT = ENV.bool("SECURE_SSL_REDIRECT", default=True)
+SESSION_COOKIE_SECURE = ENV.bool("SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE = ENV.bool("CSRF_COOKIE_SECURE", default=True)
+SECURE_BROWSER_XSS_FILTER = ENV.bool("SECURE_BROWSER_XSS_FILTER", default=True)
+SECURE_CONTENT_TYPE_NOSNIFF = ENV.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=True)
+X_FRAME_OPTIONS = ENV("X_FRAME_OPTIONS", default="DENY")
 
 # Email backend
-EMAIL_BACKEND = env(
+EMAIL_BACKEND = ENV(
     "EMAIL_BACKEND",
     default="django.core.mail.backends.smtp.EmailBackend",
 )
+
+ROOT_DOMAINS = set(ENV.list("ROOT_DOMAINS", default=["localhost", "127.0.0.1"]))

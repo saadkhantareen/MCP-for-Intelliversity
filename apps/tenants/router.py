@@ -4,7 +4,7 @@ from apps.tenants.context import get_current_tenant
 GLOBAL_APPS = {"tenants", "admin", "sessions", "messages", "staticfiles"}
 # Apps that must exist in BOTH global and tenant databases
 # (auth contains Group, Permission; contenttypes is required by auth)
-SHARED_APPS = {"auth", "contenttypes", "users"}
+SHARED_APPS = {"auth", "contenttypes", "accounts"}
 
 
 class UniversityDatabaseRouter:

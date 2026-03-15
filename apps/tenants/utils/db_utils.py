@@ -1,5 +1,4 @@
 import logging
-import os
 import threading
 
 from django.conf import settings
@@ -19,15 +18,20 @@ def build_tenant_db_config(tenant):
     return {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": tenant.db_name,
-        "USER": settings.env("MAIN_POSTGRES_USER"),
-        "PASSWORD": settings.env("MAIN_POSTGRES_PASSWORD"),
-        "HOST": tenant.db_host or settings.env("TENANT_DB_HOST", "localhost"),
+        "USER": settings.ENV("MAIN_POSTGRES_USER"),
+        "PASSWORD": settings.ENV("MAIN_POSTGRES_PASSWORD"),
+        "HOST": tenant.db_host or settings.ENV("TENANT_DB_HOST", default="localhost"),
         "PORT": tenant.db_port or "5432",
-        "CONN_MAX_AGE": settings.env.int("DB_CONN_MAX_AGE", default=60),
+        "CONN_MAX_AGE": settings.ENV.int("DB_CONN_MAX_AGE", default=60),
+        "ATOMIC_REQUESTS": True,
+        "AUTOCOMMIT": True,
+        "TIME_ZONE": settings.TIME_ZONE,
         "OPTIONS": {
-            "sslmode": settings.env("DB_SSL_MODE", "require"),
-            "connect_timeout": settings.env.int("DB_CONNECT_TIMEOUT", default=10),
+            "sslmode": settings.ENV("DB_SSL_MODE", default="require"),
+            "connect_timeout": settings.ENV.int("DB_CONNECT_TIMEOUT", default=10),
         },
+        "TEST": {"NAME": None},
+        "CONN_HEALTH_CHECKS": True,
     }
 
 
@@ -49,9 +53,20 @@ def ensure_tenant_db_configured(tenant):
 
         logger.info(f"Configuring database connection for tenant: {tenant.subdomain}")
 
-        settings.DATABASES[alias] = build_tenant_db_config(tenant)
-
+        config = build_tenant_db_config(tenant)
         # Update Django's ConnectionHandler
-        connections.databases = settings.DATABASES
+        connections.databases[alias] = config
 
     return alias
+
+
+def close_tenant_db_connection(alias):
+    """
+    Safely closes a tenant database connection if it exists.
+    """
+    try:
+        if alias in connections:
+            connections[alias].close()
+            logger.debug(f"Closed connection for tenant DB: {alias}")
+    except Exception as e:
+        logger.warning(f"Failed to close connection for {alias}: {str(e)}")
