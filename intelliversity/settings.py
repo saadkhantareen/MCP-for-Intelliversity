@@ -205,7 +205,9 @@ SPECTACULAR_SETTINGS = {
 
 
 # CORS
-CORS_ALLOWED_ORIGINS = ENV.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGIN_REGEXES = ENV.list(
+    "CORS_ALLOWED_ORIGIN_REGEXES", default=[r"https?://(.*\.)?localhost(:\d+)?$"]
+)
 CORS_ALLOW_CREDENTIALS = ENV.bool("CORS_ALLOW_CREDENTIALS", default=False)
 
 # Security
@@ -223,3 +225,10 @@ EMAIL_BACKEND = ENV(
 )
 
 ROOT_DOMAINS = set(ENV.list("ROOT_DOMAINS", default=["localhost", "127.0.0.1"]))
+
+# Frontend for forget-password
+FRONTEND_BASE_DOMAIN = ENV("FRONTEND_BASE_DOMAIN", default="localhost")
+FRONTEND_PORT = ENV.int("FRONTEND_PORT", default="3000")
+
+# forget password link expiration time
+PASSWORD_RESET_TIMEOUT = ENV.int("PASSWORD_RESET_TIMEOUT", default=900)
