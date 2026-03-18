@@ -82,6 +82,7 @@ jobs:
           DJANGO_SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: false
           ALLOWED_HOSTS: localhost,127.0.0.1,.localhost
+          SECURE_SSL_REDIRECT: false
           MAIN_POSTGRES_DB: test_db
           MAIN_POSTGRES_USER: postgres
           MAIN_POSTGRES_PASSWORD: postgres
