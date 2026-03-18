@@ -1,4 +1,5 @@
 from django.db import connections
+
 from apps.tenants.utils.db_utils import ensure_tenant_db_configured
 
 

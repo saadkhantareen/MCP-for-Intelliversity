@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+
+from apps.tenants.context import set_current_tenant
 from apps.tenants.models import University
 from apps.tenants.router import UniversityDatabaseRouter
-from apps.tenants.context import set_current_tenant
 
 User = get_user_model()
 

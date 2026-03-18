@@ -1,6 +1,7 @@
 import pytest
 from rest_framework.serializers import ValidationError
-from apps.accounts.validators import validate_university_email, validate_strong_password
+
+from apps.accounts.validators import validate_strong_password, validate_university_email
 
 
 @pytest.mark.parametrize(

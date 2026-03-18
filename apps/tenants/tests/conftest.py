@@ -1,4 +1,5 @@
 import pytest
+
 from apps.tenants.context import clear_current_tenant
 from apps.tenants.models import Portal, University
 

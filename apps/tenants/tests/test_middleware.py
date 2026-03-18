@@ -1,8 +1,10 @@
 import json
+
 import pytest
 from django.http import HttpResponse
-from apps.tenants.middleware import TenantMiddleware
+
 from apps.tenants.context import get_current_tenant
+from apps.tenants.middleware import TenantMiddleware
 
 pytestmark = pytest.mark.django_db
 
