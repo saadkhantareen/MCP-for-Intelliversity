@@ -81,7 +81,7 @@ jobs:
           DJANGO_SETTINGS_MODULE: intelliversity.settings
           DJANGO_SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: false
-          ALLOWED_HOSTS: localhost,127.0.0.1
+          ALLOWED_HOSTS: localhost,127.0.0.1,.localhost
           MAIN_POSTGRES_DB: test_db
           MAIN_POSTGRES_USER: postgres
           MAIN_POSTGRES_PASSWORD: postgres
