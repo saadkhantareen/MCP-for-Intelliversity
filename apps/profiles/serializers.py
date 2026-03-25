@@ -74,6 +74,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
         model = BaseProfile
         fields = [
             "id",
+            "user",
             "email", "first_name", "last_name", "roles",
             "profile_picture",
             "father_name", "date_of_birth", "gender",
