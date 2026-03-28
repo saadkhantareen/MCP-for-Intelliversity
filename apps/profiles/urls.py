@@ -6,7 +6,10 @@ from apps.profiles.views import (
     AdminDocumentView,
 )
 
+from apps.profiles.views_bulk import BulkUploadView, BulkUploadTemplateView
 urlpatterns = [
+    path('bulk-upload/', BulkUploadView.as_view(), name='bulk-upload'),
+    path('bulk-upload/template/', BulkUploadTemplateView.as_view(), name='bulk-upload-template'),
     # own profile
     path("me/", MyProfileView.as_view(), name="my-profile"),
 
