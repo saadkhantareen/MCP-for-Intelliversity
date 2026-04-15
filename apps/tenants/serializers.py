@@ -30,9 +30,8 @@ class UniversityPortalBrandingSerializer(serializers.ModelSerializer):
         return get_public_asset_url(obj.favicon_public_id)
 
     def get_page_asset(self, obj) -> dict | None:
-        page_type = self.context.get("page_type")
-        if not page_type:
-            return None
+        # as branding is called once on the login page, so we return the login page asset here to save an extra call from the client
+        page_type = "login"
 
         try:
             page_asset = PageAsset.objects.get(

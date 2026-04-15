@@ -15,13 +15,13 @@ class GlobalUploadSignatureSerializer(serializers.Serializer):
         asset_category = self.context["asset_category"]
         validate_global_asset_category(asset_category)
 
-        host = self.context["request"].get_host()
+        domain = self.context["domain"]
 
         try:
             university_domain = UniversityDomain.objects.select_related(
                 "university_portal__university",
                 "university_portal__portal",
-            ).get(domain=host)
+            ).get(domain=domain)
         except UniversityDomain.DoesNotExist:
             raise serializers.ValidationError({"non_field_errors": "Invalid domain."})
 

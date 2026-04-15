@@ -7,12 +7,12 @@ from apps.storage.views import (
 
 urlpatterns = [
     path(
-        "/uploads/global/signature/<str:asset_category>",
+        "uploads/global/signature/<str:asset_category>/",
         GlobalUploadSignatureView.as_view(),
         name="global-upload",
     ),
     path(
-        "uploads/signature/<str:asset_category>",
+        "uploads/signature/<str:asset_category>/",
         UploadSignatureView.as_view(),
         name="upload",
     ),

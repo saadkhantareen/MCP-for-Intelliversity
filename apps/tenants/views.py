@@ -13,49 +13,26 @@ from apps.tenants.serializers import (
     PortalBrandingUpdateSerializer,
     UniversityPortalBrandingSerializer,
 )
-from apps.tenants.utils.domain_utils import resolve_university_portal
 
 logger = logging.getLogger(__name__)
-
-
-class UniversityPortalDetailView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, subdomain, portal_name):
-        try:
-            university_portal = UniversityPortal.objects.select_related(
-                "university", "portal"
-            ).get(
-                university__subdomain=subdomain,
-                portal__name=portal_name,
-                is_active=True,
-            )
-        except UniversityPortal.DoesNotExist:
-            return Response(
-                {"detail": "No active UniversityPortal found for this subdomain."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        data = {
-            "university_portal_id": university_portal.id,
-            "university": university_portal.university.name,
-            "portal": university_portal.portal.name,
-        }
-        return Response(data, status=status.HTTP_200_OK)
 
 
 # apply cache in future after setting up redis or memcached
 class PortalBrandingDetailView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = UniversityPortalBrandingSerializer
 
-    def get(self, request):
-        university_portal, error = resolve_university_portal(request.get_host())
-        if error:
-            return error
+    def get(self, request: Request, **kwargs: dict) -> Response:
+        domain = request.query_params.get("domain")
 
         try:
-            portal_branding = PortalBranding.objects.get(
-                university_portal=university_portal
+            portal_branding = (
+                PortalBranding.objects.select_related("university_portal")
+                .prefetch_related("university_portal__domains")
+                .get(
+                    university_portal__domains__domain=domain,
+                    university_portal__is_active=True,
+                )
             )
         except PortalBranding.DoesNotExist:
             return Response(
@@ -65,18 +42,21 @@ class PortalBrandingDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = UniversityPortalBrandingSerializer(portal_branding)
+        serializer = self.serializer_class(portal_branding)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class PageAssetDetailView(APIView):
 
     permission_classes = [AllowAny]
+    serializer_class = PageAssetSerializer
 
-    def get(self, request, university_portal_id, page_type):
+    def get(self, request: Request, page_type: str, **kwargs: dict) -> Response:
+        domain = request.query_params.get("domain")
         try:
             page_asset = PageAsset.objects.select_related("university_portal").get(
-                university_portal__id=university_portal_id,
+                university_portal__domains__domain=domain,
+                university_portal__is_active=True,
                 page_type=page_type,
             )
 
@@ -88,23 +68,32 @@ class PageAssetDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = PageAssetSerializer(page_asset)
+        serializer = self.serializer_class(page_asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # also delete the cache key in the update view after updating the asset
 class PortalBrandingUpdateView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = PortalBrandingUpdateSerializer
 
-    def patch(self, request: Request) -> Response:
-        university_portal, error = resolve_university_portal(request.get_host())
-        if error:
-            return error
+    def patch(self, request: Request, **kwargs: dict) -> Response:
+        domain = request.query_params.get("domain")
+        try:
+            university_portal = UniversityPortal.objects.get(
+                domains__domain=domain, is_active=True
+            )
+        except UniversityPortal.DoesNotExist:
+            return Response(
+                {"detail": "No active UniversityPortal found for this domain."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         instance, _ = PortalBranding.objects.get_or_create(
             university_portal=university_portal
         )
 
-        serializer = PortalBrandingUpdateSerializer(
+        serializer = self.serializer_class(
             instance,
             data=request.data,
             partial=True,
@@ -118,18 +107,28 @@ class PortalBrandingUpdateView(APIView):
 
 
 class PageAssetUpdateView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = PageAssetUpdateSerializer
 
-    def patch(self, request: Request, page_type: str) -> Response:
-        university_portal, error = resolve_university_portal(request.get_host())
-        if error:
-            return error
+    def patch(self, request: Request, page_type: str, **kwargs: dict) -> Response:
+
+        domain = request.query_params.get("domain")
+        try:
+            university_portal = UniversityPortal.objects.get(
+                domains__domain=domain, is_active=True
+            )
+        except UniversityPortal.DoesNotExist:
+            return Response(
+                {"detail": "No active UniversityPortal found for this domain."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         instance, _ = PageAsset.objects.get_or_create(
             university_portal=university_portal,
             page_type=page_type,
         )
 
-        serializer = PageAssetUpdateSerializer(
+        serializer = self.serializer_class(
             instance,
             data=request.data,
             partial=True,

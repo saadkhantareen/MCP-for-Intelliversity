@@ -6,9 +6,9 @@ from cloudinary.utils import cloudinary_url, now
 _SIGNED_URL_TTL = 3600  # 1 hour
 
 
-def build_public_id(subdomain, portal_name, asset_category, access, is_global=False):
+def build_folder_path(subdomain, portal_name, asset_category, access, is_global=False):
     """
-    Generate a unique public_id for Cloudinary uploads, e.g. "universities/oxford/portals/student/public/branding/logo-3f7a2c..."
+    Generate a folder path for Cloudinary uploads, e.g. "universities/oxford/portals/student/public/branding"
     """
     start = "universities"
 
@@ -16,6 +16,17 @@ def build_public_id(subdomain, portal_name, asset_category, access, is_global=Fa
         start = "global"
 
     folder = f"{start}/{subdomain}/{portal_name}/{access}/{asset_category}"
+    return folder
+
+
+def build_public_id(subdomain, portal_name, asset_category, access, is_global=False):
+    """
+    Generate a unique public_id for Cloudinary uploads, e.g. "universities/oxford/portals/student/public/branding/logo-3f7a2c..."
+    """
+
+    folder = build_folder_path(
+        subdomain, portal_name, asset_category, access, is_global
+    )
     public_id = f"{folder}/{uuid.uuid4().hex}"
     return public_id
 
@@ -31,6 +42,7 @@ def get_public_asset_url(
         public_id,
         resource_type=resource_type,
         type="upload",
+        secure=True,
         **options,
     )
     return url
@@ -56,6 +68,7 @@ def get_private_asset_url(
         resource_type=resource_type,
         type=delivery_type,
         sign_url=True,
+        secure=True,
         expires_at=now() + ttl,
         **options,
     )

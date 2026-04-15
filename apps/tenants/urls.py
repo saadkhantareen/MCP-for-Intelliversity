@@ -5,15 +5,9 @@ from apps.tenants.views import (
     PageAssetUpdateView,
     PortalBrandingDetailView,
     PortalBrandingUpdateView,
-    UniversityPortalDetailView,
 )
 
 urlpatterns = [
-    path(
-        "<str:subdomain>/<str:portal_name>/",
-        UniversityPortalDetailView.as_view(),
-        name="university-portal-detail",
-    ),
     path(
         "branding/",
         PortalBrandingDetailView.as_view(),
@@ -25,7 +19,7 @@ urlpatterns = [
         name="portal-branding-update",
     ),
     path(
-        "<uuid:university_portal_id>/<str:page_type>/background/",
+        "<str:page_type>/background/",
         PageAssetDetailView.as_view(),
         name="page-asset-detail",
     ),

@@ -25,16 +25,20 @@ Flow
 
 class GlobalUploadSignatureView(APIView):
     """
-    GET  /uploads/global/signature/<str:asset_category>/
+    GET  /uploads/global/signature/<str:asset_category>/?domain=...
     Returns signed Cloudinary params for a global (cross-university) upload.
     """
 
     permission_classes = [AllowAny]
 
-    def get(self, request: Request, asset_category: str) -> Response:
+    def get(self, request, asset_category, **kwargs) -> Response:
         serializer = GlobalUploadSignatureSerializer(
             data=request.data,
-            context={"request": request, "asset_category": asset_category},
+            context={
+                "request": request,
+                "asset_category": asset_category,
+                "domain": request.query_params.get("domain"),
+            },
         )
         serializer.is_valid(raise_exception=True)
         return Response(serializer.get_upload_params())

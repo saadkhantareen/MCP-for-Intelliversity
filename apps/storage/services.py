@@ -3,7 +3,7 @@ import time
 import cloudinary
 import cloudinary.utils
 
-from apps.storage.utils import build_public_id
+from apps.storage.utils import build_public_id, build_folder_path
 
 
 class CloudinaryService:
@@ -35,6 +35,9 @@ class CloudinaryService:
         public_id = build_public_id(
             university_subdomain, portal_name, asset_category, access, is_global
         )
+        asset_folder = build_folder_path(
+            university_subdomain, portal_name, asset_category, access, is_global
+        )
         upload_type = "authenticated" if access == "private" else "upload"
         context = self._build_context(university_subdomain, portal_name, is_global)
         timestamp = int(time.time())
@@ -42,6 +45,7 @@ class CloudinaryService:
         params_to_sign = {
             "public_id": public_id,
             "timestamp": timestamp,
+            "asset_folder": asset_folder,
             "type": upload_type,
             "context": context,
         }
@@ -57,6 +61,7 @@ class CloudinaryService:
             "public_id": public_id,
             "type": upload_type,
             "context": context,
+            "asset_folder": asset_folder,
         }
 
     # Private helper
