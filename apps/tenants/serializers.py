@@ -10,6 +10,14 @@ class UniversityPortalBrandingSerializer(serializers.ModelSerializer):
     favicon_url = serializers.SerializerMethodField()
     page_asset = serializers.SerializerMethodField()
 
+    university_name = serializers.CharField(
+        source="university_portal.university.name", read_only=True
+    )
+
+    portal_name = serializers.CharField(
+        source="university_portal.portal.name", read_only=True
+    )
+
     class Meta:
         model = PortalBranding
         fields = [
@@ -18,6 +26,8 @@ class UniversityPortalBrandingSerializer(serializers.ModelSerializer):
             "logo_dark_url",
             "favicon_url",
             "page_asset",
+            "university_name",
+            "portal_name",
         ]
 
     def get_logo_url(self, obj) -> str | None:
@@ -30,24 +40,23 @@ class UniversityPortalBrandingSerializer(serializers.ModelSerializer):
         return get_public_asset_url(obj.favicon_public_id)
 
     def get_page_asset(self, obj) -> dict | None:
-        # as branding is called once on the login page, so we return the login page asset here to save an extra call from the client
-        page_type = "login"
+        assets = getattr(obj.university_portal, "login_page_asset")
+        if assets:
+            page_asset = assets[0]
+            return PageAssetSerializer(page_asset).data
 
-        try:
-            page_asset = PageAsset.objects.get(
-                university_portal=obj.university_portal,
-                page_type=page_type,
-            )
-        except PageAsset.DoesNotExist:
-            return None
-
-        return PageAssetSerializer(page_asset).data
+        return None
 
 
 class PortalBrandingUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PortalBranding
-        fields = ["logo_public_id", "logo_dark_public_id", "favicon_public_id"]
+        fields = [
+            "theme_config",
+            "logo_public_id",
+            "logo_dark_public_id",
+            "favicon_public_id",
+        ]
 
     def update(self, instance, validated_data):
         public_id_fields = [
@@ -68,7 +77,7 @@ class PortalBrandingUpdateSerializer(serializers.ModelSerializer):
 class PageAssetUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PageAsset
-        fields = ["background_image_public_id"]
+        fields = ["page_type", "background_image_public_id", "metadata"]
 
     def update(self, instance, validated_data):
         if "background_image_public_id" in validated_data:

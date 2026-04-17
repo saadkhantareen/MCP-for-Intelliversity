@@ -3,7 +3,7 @@ import time
 import cloudinary
 import cloudinary.utils
 
-from apps.storage.utils import build_public_id, build_folder_path
+from apps.storage.utils import build_folder_path, build_public_id
 
 
 class CloudinaryService:

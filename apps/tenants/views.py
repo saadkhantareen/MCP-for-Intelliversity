@@ -1,5 +1,6 @@
 import logging
 
+from django.db.models import Prefetch
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
@@ -27,12 +28,25 @@ class PortalBrandingDetailView(APIView):
 
         try:
             portal_branding = (
-                PortalBranding.objects.select_related("university_portal")
-                .prefetch_related("university_portal__domains")
-                .get(
+                PortalBranding.objects.select_related(
+                    "university_portal",
+                    "university_portal__university",
+                    "university_portal__portal",
+                )
+                .prefetch_related(
+                    "university_portal__domains",
+                    Prefetch(
+                        "university_portal__page_assets",
+                        # as branding is called once on the login page, so we return the login page asset here to save an extra call from the client
+                        queryset=PageAsset.objects.filter(page_type="login"),
+                        to_attr="login_page_asset",
+                    ),
+                )
+                .filter(
                     university_portal__domains__domain=domain,
                     university_portal__is_active=True,
                 )
+                .first()
             )
         except PortalBranding.DoesNotExist:
             return Response(

@@ -100,8 +100,7 @@ class PortalBranding(BaseModel):
                 "background": "#F5F5F5",
                 "surface":    "#FFFFFF",
                 "text":       "#212121",
-                "text_muted": "#757575",
-                "sidebar_bg": "#1E2A38"
+                "text_muted": "#757575"
             },
             "typography": {
                 "font_family":   "Inter, sans-serif",
@@ -145,13 +144,12 @@ class PageAsset(BaseModel):
 
     metadata shape (stored as JSON):
         {
-            "overlay_color":   "#000000",
-            "overlay_opacity": 0.45,
             "tagline":         "Welcome to Oxford University Portal",
             "tagline_color":   "#FFFFFF",
-            "show_logo":       true,
-            "background_position": "center center",
-            "background_size":     "cover"
+
+            # Baad me Baad me.
+            "overlay_color":   "#000000",
+            "overlay_opacity": 0.45,
         }
     """
 
