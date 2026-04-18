@@ -33,6 +33,9 @@ def validate_strong_password(value):
 
 
 def validate_recaptcha(token):
+    # Bypass recaptcha in development mode or if generic dummy secret is used
+    if settings.DEBUG and settings.RECAPTCHA_SECRET_KEY == "dummy_secret_key":
+        return
     try:
         response = requests.post(
             "https://www.google.com/recaptcha/api/siteverify",
