@@ -25,9 +25,17 @@ User = get_user_model()
 
 # Role → (role profile model, user serializer, admin serializer)
 ROLE_PROFILE_MAP = {
-    "student": (StudentProfile, StudentProfileSerializer, AdminStudentProfileSerializer),
-    "faculty": (FacultyProfile, FacultyProfileSerializer, AdminFacultyProfileSerializer),
-    "admin":   (AdminProfile,   AdminProfileSerializer,   AdminProfileSerializer),
+    "student": (
+        StudentProfile,
+        StudentProfileSerializer,
+        AdminStudentProfileSerializer,
+    ),
+    "faculty": (
+        FacultyProfile,
+        FacultyProfileSerializer,
+        AdminFacultyProfileSerializer,
+    ),
+    "admin": (AdminProfile, AdminProfileSerializer, AdminProfileSerializer),
 }
 
 
@@ -248,12 +256,17 @@ class AdminDocumentView(APIView):
 
     def get(self, request, user_id):
         if not self._is_admin(request):
-            return Response({"detail": "Only admins can access this."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only admins can access this."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         base_profile = get_or_create_base_profile(user)
         documents = Document.objects.filter(base_profile=base_profile)
@@ -262,12 +275,17 @@ class AdminDocumentView(APIView):
 
     def post(self, request, user_id):
         if not self._is_admin(request):
-            return Response({"detail": "Only admins can access this."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only admins can access this."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         base_profile = get_or_create_base_profile(user)
         serializer = AdminDocumentSerializer(data=request.data)

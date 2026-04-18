@@ -10,7 +10,11 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.choices import Roles
-from apps.accounts.validators import validate_strong_password, validate_university_email,validate_recaptcha
+from apps.accounts.validators import (
+    validate_recaptcha,
+    validate_strong_password,
+    validate_university_email,
+)
 
 User = get_user_model()
 
@@ -64,8 +68,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email           = serializers.EmailField(validators=[validate_university_email])
-    password        = serializers.CharField(write_only=True)
+    email = serializers.EmailField(validators=[validate_university_email])
+    password = serializers.CharField(write_only=True)
     recaptcha_token = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
@@ -107,6 +111,7 @@ class LoginSerializer(serializers.Serializer):
             },
             "university": request.university.name,
         }
+
 
 class PasswordResetRequestSerializer(serializers.Serializer):
 

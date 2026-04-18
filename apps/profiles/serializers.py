@@ -10,8 +10,8 @@ from apps.profiles.models import (
     StudentProfile,
 )
 
-
 # ── Common Validators ────────────────────────────────────────────
+
 
 def validate_cnic(value):
     if value and not value.replace("-", "").isdigit():
@@ -23,7 +23,9 @@ def validate_cnic(value):
 
 def validate_phone_number(value):
     if value and not value.replace("+", "").replace("-", "").isdigit():
-        raise serializers.ValidationError("Phone number must contain only digits, +, or -.")
+        raise serializers.ValidationError(
+            "Phone number must contain only digits, +, or -."
+        )
     if value and len(value) < 10:
         raise serializers.ValidationError("Phone number must be at least 10 digits.")
     return value
@@ -31,62 +33,96 @@ def validate_phone_number(value):
 
 # ── Document Serializer ──────────────────────────────────────────
 
+
 class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = [
-            "id", "document_type", "title",
-            "file", "description", "is_verified",
-            "created_at", "updated_at",
+            "id",
+            "document_type",
+            "title",
+            "file",
+            "description",
+            "is_verified",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "is_verified", "created_at", "updated_at"]
 
 
 class AdminDocumentSerializer(serializers.ModelSerializer):
     """Admin can verify documents."""
+
     class Meta:
         model = Document
         fields = [
-            "id", "document_type", "title",
-            "file", "description", "is_verified",
-            "created_at", "updated_at",
+            "id",
+            "document_type",
+            "title",
+            "file",
+            "description",
+            "is_verified",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
 # ── Base Profile Serializer ──────────────────────────────────────
 
+
 class BaseProfileSerializer(serializers.ModelSerializer):
 
     # from User model — read only
-    email      = serializers.EmailField(source="user.email", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
     first_name = serializers.CharField(source="user.first_name", read_only=True)
-    last_name  = serializers.CharField(source="user.last_name", read_only=True)
-    roles      = serializers.SerializerMethodField(read_only=True)
-    documents  = DocumentSerializer(many=True, read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    roles = serializers.SerializerMethodField(read_only=True)
+    documents = DocumentSerializer(many=True, read_only=True)
 
     # editable fields with validation
-    cnic              = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    phone_number      = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    emergency_contact = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    cnic = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    phone_number = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+    emergency_contact = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
 
     class Meta:
         model = BaseProfile
         fields = [
             "id",
-            "user",
-            "email", "first_name", "last_name", "roles",
+            "email",
+            "first_name",
+            "last_name",
+            "roles",
             "profile_picture",
-            "father_name", "date_of_birth", "gender",
-            "nationality", "cnic", "religion",
-            "phone_number", "emergency_contact",
-            "address", "city", "country", "bio",
+            "father_name",
+            "date_of_birth",
+            "gender",
+            "nationality",
+            "cnic",
+            "religion",
+            "phone_number",
+            "emergency_contact",
+            "address",
+            "city",
+            "country",
+            "bio",
             "documents",
-            "created_at", "updated_at",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
-            "id", "email", "first_name", "last_name", "roles",
-            "documents", "created_at", "updated_at",
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "roles",
+            "documents",
+            "created_at",
+            "updated_at",
         ]
 
     def get_roles(self, obj):
@@ -109,6 +145,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
 # ── Student Profile Serializer ───────────────────────────────────
 
+
 class StudentProfileSerializer(serializers.ModelSerializer):
     """For student — limited editable fields."""
 
@@ -117,16 +154,27 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentProfile
         fields = [
-            "id", "base_profile",
-            "enrollment_number", "department", "program",
-            "semester", "batch_year", "cgpa",
-            "created_at", "updated_at",
+            "id",
+            "base_profile",
+            "enrollment_number",
+            "department",
+            "program",
+            "semester",
+            "batch_year",
+            "cgpa",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
             "id",
-            "enrollment_number", "department", "program",
-            "semester", "batch_year", "cgpa",
-            "created_at", "updated_at",
+            "enrollment_number",
+            "department",
+            "program",
+            "semester",
+            "batch_year",
+            "cgpa",
+            "created_at",
+            "updated_at",
         ]
 
     def update(self, instance, validated_data):
@@ -151,10 +199,16 @@ class AdminStudentProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentProfile
         fields = [
-            "id", "base_profile",
-            "enrollment_number", "department", "program",
-            "semester", "batch_year", "cgpa",
-            "created_at", "updated_at",
+            "id",
+            "base_profile",
+            "enrollment_number",
+            "department",
+            "program",
+            "semester",
+            "batch_year",
+            "cgpa",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -177,6 +231,7 @@ class AdminStudentProfileSerializer(serializers.ModelSerializer):
 
 # ── Faculty Profile Serializer ───────────────────────────────────
 
+
 class FacultyProfileSerializer(serializers.ModelSerializer):
     """For faculty — limited editable fields."""
 
@@ -185,14 +240,22 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = FacultyProfile
         fields = [
-            "id", "base_profile",
-            "designation", "qualification", "specialization",
-            "experience_years", "office_number", "office_location",
-            "created_at", "updated_at",
+            "id",
+            "base_profile",
+            "designation",
+            "qualification",
+            "specialization",
+            "experience_years",
+            "office_number",
+            "office_location",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
-            "id", "designation",
-            "created_at", "updated_at",
+            "id",
+            "designation",
+            "created_at",
+            "updated_at",
         ]
 
     def update(self, instance, validated_data):
@@ -216,10 +279,16 @@ class AdminFacultyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = FacultyProfile
         fields = [
-            "id", "base_profile",
-            "designation", "qualification", "specialization",
-            "experience_years", "office_number", "office_location",
-            "created_at", "updated_at",
+            "id",
+            "base_profile",
+            "designation",
+            "qualification",
+            "specialization",
+            "experience_years",
+            "office_number",
+            "office_location",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -242,6 +311,7 @@ class AdminFacultyProfileSerializer(serializers.ModelSerializer):
 
 # ── Admin Profile Serializer ─────────────────────────────────────
 
+
 class AdminProfileSerializer(serializers.ModelSerializer):
     """For admin — all fields editable."""
 
@@ -250,9 +320,13 @@ class AdminProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminProfile
         fields = [
-            "id", "base_profile",
-            "designation", "office_number", "office_location",
-            "created_at", "updated_at",
+            "id",
+            "base_profile",
+            "designation",
+            "office_number",
+            "office_location",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 

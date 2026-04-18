@@ -16,8 +16,8 @@ exclude =
 # Match common formatter defaults
 max-line-length = 88
 
-# Ignore long lines in docstrings, unused imports, long lines
-ignore = D203, F401, E501
+# Ignore long lines in docstrings, unused imports, long lines, line break before operator
+ignore = D203, F401, E501, W503
 
 
 

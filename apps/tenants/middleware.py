@@ -1,9 +1,8 @@
 from django.conf import settings
-from django.http import JsonResponse
 
 from apps.tenants.context import clear_current_tenant, set_current_tenant
-from apps.tenants.models import University
 from apps.tenants.utils.db_utils import ensure_tenant_db_configured
+from apps.tenants.utils.domain_utils import resolve_university_portal
 
 
 class TenantMiddleware:
@@ -23,16 +22,13 @@ class TenantMiddleware:
             request.university = None
             return self.get_response(request)
 
-        portal_name, university = self._resolve_portal_and_university(host)
+        university_portal, error_response = resolve_university_portal(host)
 
-        if portal_name is None:
-            return JsonResponse({"detail": "Invalid portal."}, status=400)
+        if error_response:
+            return error_response
 
-        if university is None:
-            return JsonResponse(
-                {"detail": "University not found or inactive."},
-                status=404,
-            )
+        university = university_portal.university
+        portal_name = university_portal.portal.name
 
         request.portal_name = portal_name
         request.university = university
@@ -46,34 +42,3 @@ class TenantMiddleware:
             clear_current_tenant()
 
         return response
-
-    def _resolve_portal_and_university(self, host):
-        """
-        Resolve:
-        student.fast.intelliversity.com
-        student.fast.localhost
-        """
-
-        parts = host.split(".")
-
-        if len(parts) < 3:
-            return None, None
-
-        portal_name = parts[0]
-        university_subdomain = parts[1]
-
-        try:
-            university = University.objects.using("default").get(
-                subdomain=university_subdomain, is_active=True
-            )
-        except University.DoesNotExist:
-            return portal_name, None
-
-        portal_exists = university.portals.filter(
-            name=portal_name, is_active=True
-        ).exists()
-
-        if not portal_exists:
-            return None, university
-
-        return portal_name, university

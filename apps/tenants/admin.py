@@ -1,7 +1,17 @@
 from django.contrib import admin
 
-from apps.tenants.models import Portal, University
+from apps.tenants.models import (
+    PageAsset,
+    Portal,
+    PortalBranding,
+    University,
+    UniversityDomain,
+    UniversityPortal,
+)
 
-# Register your models here.
 admin.site.register(University)
 admin.site.register(Portal)
+admin.site.register(UniversityPortal)
+admin.site.register(UniversityDomain)
+admin.site.register(PortalBranding)
+admin.site.register(PageAsset)
