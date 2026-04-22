@@ -97,7 +97,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "roles",
-            "profile_picture",
+            "profile_picture",    #profile_picture_url
             "father_name",
             "date_of_birth",
             "gender",
