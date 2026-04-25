@@ -1,3 +1,4 @@
+# apps/profiles/serializers.py
 from datetime import date
 
 from rest_framework import serializers
@@ -9,6 +10,8 @@ from apps.profiles.models import (
     FacultyProfile,
     StudentProfile,
 )
+from apps.storage.utils import get_private_asset_url, get_public_asset_url
+
 
 # ── Common Validators ────────────────────────────────────────────
 
@@ -23,49 +26,70 @@ def validate_cnic(value):
 
 def validate_phone_number(value):
     if value and not value.replace("+", "").replace("-", "").isdigit():
-        raise serializers.ValidationError(
-            "Phone number must contain only digits, +, or -."
-        )
+        raise serializers.ValidationError("Phone number must contain only digits, +, or -.")
     if value and len(value) < 10:
         raise serializers.ValidationError("Phone number must be at least 10 digits.")
     return value
 
 
-# ── Document Serializer ──────────────────────────────────────────
+# ── Document Serializers ─────────────────────────────────────────
 
 
 class DocumentSerializer(serializers.ModelSerializer):
+    """
+    User's own document serializer.
+    'url' is a signed Cloudinary URL valid for 1 hour — for viewing the private file.
+    """
+    url = serializers.SerializerMethodField()
+
     class Meta:
-        model = Document
+        model  = Document
         fields = [
             "id",
             "document_type",
             "title",
-            "file",
+            "public_id",
+            "resource_type",
+            "url",
             "description",
             "is_verified",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "is_verified", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_verified", "url", "created_at", "updated_at"]
+
+    def get_url(self, obj) -> str | None:
+        return get_private_asset_url(
+            public_id=obj.public_id,
+            resource_type=obj.resource_type,
+        )
 
 
 class AdminDocumentSerializer(serializers.ModelSerializer):
-    """Admin can verify documents."""
+    """Admin can verify documents and view signed URLs."""
+    url = serializers.SerializerMethodField()
 
     class Meta:
-        model = Document
+        model  = Document
         fields = [
             "id",
             "document_type",
             "title",
-            "file",
+            "public_id",
+            "resource_type",
+            "url",
             "description",
             "is_verified",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "url", "created_at", "updated_at"]
+
+    def get_url(self, obj) -> str | None:
+        return get_private_asset_url(
+            public_id=obj.public_id,
+            resource_type=obj.resource_type,
+        )
 
 
 # ── Base Profile Serializer ──────────────────────────────────────
@@ -74,30 +98,30 @@ class AdminDocumentSerializer(serializers.ModelSerializer):
 class BaseProfileSerializer(serializers.ModelSerializer):
 
     # from User model — read only
-    email = serializers.EmailField(source="user.email", read_only=True)
+    email      = serializers.EmailField(source="user.email", read_only=True)
     first_name = serializers.CharField(source="user.first_name", read_only=True)
-    last_name = serializers.CharField(source="user.last_name", read_only=True)
-    roles = serializers.SerializerMethodField(read_only=True)
-    documents = DocumentSerializer(many=True, read_only=True)
+    last_name  = serializers.CharField(source="user.last_name", read_only=True)
+    roles      = serializers.SerializerMethodField(read_only=True)
+    documents  = DocumentSerializer(many=True, read_only=True)
+
+    # profile picture — public Cloudinary URL
+    profile_picture_url = serializers.SerializerMethodField()
 
     # editable fields with validation
-    cnic = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    phone_number = serializers.CharField(
-        required=False, allow_null=True, allow_blank=True
-    )
-    emergency_contact = serializers.CharField(
-        required=False, allow_null=True, allow_blank=True
-    )
+    cnic              = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    phone_number      = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    emergency_contact = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
-        model = BaseProfile
+        model  = BaseProfile
         fields = [
             "id",
             "email",
             "first_name",
             "last_name",
             "roles",
-            "profile_picture",    #profile_picture_url
+            "profile_picture_public_id",   # writable — save after Cloudinary upload
+            "profile_picture_url",          # read only — generated from public_id
             "father_name",
             "date_of_birth",
             "gender",
@@ -120,6 +144,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "roles",
+            "profile_picture_url",
             "documents",
             "created_at",
             "updated_at",
@@ -127,6 +152,9 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return list(obj.user.groups.values_list("name", flat=True))
+
+    def get_profile_picture_url(self, obj) -> str | None:
+        return get_public_asset_url(obj.profile_picture_public_id)
 
     def validate_cnic(self, value):
         return validate_cnic(value)
@@ -143,48 +171,30 @@ class BaseProfileSerializer(serializers.ModelSerializer):
         return value
 
 
-# ── Student Profile Serializer ───────────────────────────────────
+# ── Student Profile Serializers ──────────────────────────────────
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     """For student — limited editable fields."""
-
     base_profile = BaseProfileSerializer(read_only=False, required=False)
 
     class Meta:
-        model = StudentProfile
+        model  = StudentProfile
         fields = [
-            "id",
-            "base_profile",
-            "enrollment_number",
-            "department",
-            "program",
-            "semester",
-            "batch_year",
-            "cgpa",
-            "created_at",
-            "updated_at",
+            "id", "base_profile", "enrollment_number",
+            "department", "program", "semester",
+            "batch_year", "cgpa", "created_at", "updated_at",
         ]
         read_only_fields = [
-            "id",
-            "enrollment_number",
-            "department",
-            "program",
-            "semester",
-            "batch_year",
-            "cgpa",
-            "created_at",
-            "updated_at",
+            "id", "enrollment_number", "department", "program",
+            "semester", "batch_year", "cgpa", "created_at", "updated_at",
         ]
 
     def update(self, instance, validated_data):
-        # update base profile fields
         base_profile_data = validated_data.pop("base_profile", {})
         if base_profile_data:
             base_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
+                instance.base_profile, data=base_profile_data, partial=True
             )
             base_serializer.is_valid(raise_exception=True)
             base_serializer.save()
@@ -193,22 +203,14 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 class AdminStudentProfileSerializer(serializers.ModelSerializer):
     """For admin editing student — all fields editable."""
-
     base_profile = BaseProfileSerializer(read_only=False, required=False)
 
     class Meta:
-        model = StudentProfile
+        model  = StudentProfile
         fields = [
-            "id",
-            "base_profile",
-            "enrollment_number",
-            "department",
-            "program",
-            "semester",
-            "batch_year",
-            "cgpa",
-            "created_at",
-            "updated_at",
+            "id", "base_profile", "enrollment_number",
+            "department", "program", "semester",
+            "batch_year", "cgpa", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -216,55 +218,37 @@ class AdminStudentProfileSerializer(serializers.ModelSerializer):
         base_profile_data = validated_data.pop("base_profile", {})
         if base_profile_data:
             base_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
+                instance.base_profile, data=base_profile_data, partial=True
             )
             base_serializer.is_valid(raise_exception=True)
             base_serializer.save()
-
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
 
 
-# ── Faculty Profile Serializer ───────────────────────────────────
+# ── Faculty Profile Serializers ──────────────────────────────────
 
 
 class FacultyProfileSerializer(serializers.ModelSerializer):
     """For faculty — limited editable fields."""
-
     base_profile = BaseProfileSerializer(read_only=False, required=False)
 
     class Meta:
-        model = FacultyProfile
+        model  = FacultyProfile
         fields = [
-            "id",
-            "base_profile",
-            "designation",
-            "qualification",
-            "specialization",
-            "experience_years",
-            "office_number",
-            "office_location",
-            "created_at",
-            "updated_at",
+            "id", "base_profile", "designation", "qualification",
+            "specialization", "experience_years", "office_number",
+            "office_location", "created_at", "updated_at",
         ]
-        read_only_fields = [
-            "id",
-            "designation",
-            "created_at",
-            "updated_at",
-        ]
+        read_only_fields = ["id", "designation", "created_at", "updated_at"]
 
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", {})
         if base_profile_data:
             base_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
+                instance.base_profile, data=base_profile_data, partial=True
             )
             base_serializer.is_valid(raise_exception=True)
             base_serializer.save()
@@ -273,22 +257,14 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
 
 class AdminFacultyProfileSerializer(serializers.ModelSerializer):
     """For admin editing faculty — all fields editable."""
-
     base_profile = BaseProfileSerializer(read_only=False, required=False)
 
     class Meta:
-        model = FacultyProfile
+        model  = FacultyProfile
         fields = [
-            "id",
-            "base_profile",
-            "designation",
-            "qualification",
-            "specialization",
-            "experience_years",
-            "office_number",
-            "office_location",
-            "created_at",
-            "updated_at",
+            "id", "base_profile", "designation", "qualification",
+            "specialization", "experience_years", "office_number",
+            "office_location", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -296,13 +272,10 @@ class AdminFacultyProfileSerializer(serializers.ModelSerializer):
         base_profile_data = validated_data.pop("base_profile", {})
         if base_profile_data:
             base_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
+                instance.base_profile, data=base_profile_data, partial=True
             )
             base_serializer.is_valid(raise_exception=True)
             base_serializer.save()
-
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -314,19 +287,14 @@ class AdminFacultyProfileSerializer(serializers.ModelSerializer):
 
 class AdminProfileSerializer(serializers.ModelSerializer):
     """For admin — all fields editable."""
-
     base_profile = BaseProfileSerializer(read_only=False, required=False)
 
     class Meta:
-        model = AdminProfile
+        model  = AdminProfile
         fields = [
-            "id",
-            "base_profile",
-            "designation",
-            "office_number",
-            "office_location",
-            "created_at",
-            "updated_at",
+            "id", "base_profile", "designation",
+            "office_number", "office_location",
+            "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -334,13 +302,10 @@ class AdminProfileSerializer(serializers.ModelSerializer):
         base_profile_data = validated_data.pop("base_profile", {})
         if base_profile_data:
             base_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
+                instance.base_profile, data=base_profile_data, partial=True
             )
             base_serializer.is_valid(raise_exception=True)
             base_serializer.save()
-
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
