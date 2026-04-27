@@ -42,7 +42,7 @@ class Program(BaseModel):
     """
 
     department = models.ForeignKey(
-        Department, on_delete=models.CASCADE, related_name="programs"
+        "Department", on_delete=models.CASCADE, related_name="programs"
     )
     name = models.CharField(max_length=255)
     code = models.CharField(
@@ -104,25 +104,17 @@ class CoursePrerequisite(BaseModel):
 
 class Curriculum(BaseModel):
     name = models.CharField(max_length=100)
-    program = models.ForeignKey(Program, on_delete=models.CASCADE)
+    program = models.ForeignKey("Program", on_delete=models.CASCADE)
+    total_credit_hours = models.PositiveSmallIntegerField()
+    description = models.TextField(blank=True)
     # effective_from = models.DateField()
-
-
-class Batch(BaseModel):
-    name = models.CharField(max_length=10)
-    program = models.ForeignKey(Program, on_delete=models.CASCADE)
-    curriculum = models.ForeignKey(Curriculum, on_delete=models.PROTECT)
-    year = models.PositiveIntegerField()
-    batch_type = models.CharField(max_length=10, choices=BatchType.choices)
-    start_date = models.DateField()
-    end_date = models.DateField()
 
 
 class ProgramCurriculum(BaseModel):
     curriculum = models.ForeignKey(
-        "Curriculum", on_delete=models.CASCADE, related_name="courses"
+        "Curriculum", on_delete=models.CASCADE, related_name="curriculum_courses"
     )
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    course = models.ForeignKey("Course", on_delete=models.CASCADE)
     recommended_semester = models.PositiveIntegerField()
     course_type = models.CharField(
         max_length=4, choices=CourseType.choices, default=CourseType.CORE
@@ -134,3 +126,22 @@ class ProgramCurriculum(BaseModel):
                 fields=["curriculum", "course"], name="unique_course_in_curriculum"
             )
         ]
+
+
+class Batch(BaseModel):
+    name = models.CharField(max_length=10, unique=True)
+    program = models.ForeignKey("Program", on_delete=models.CASCADE)
+    curriculum = models.ForeignKey("Curriculum", on_delete=models.PROTECT)
+    year = models.PositiveIntegerField()
+    batch_type = models.CharField(max_length=10, choices=BatchType.choices)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    max_students = models.PositiveIntegerField()
+
+
+class Section(BaseModel):
+    name = models.CharField(max_length=10)
+    batch = models.ForeignKey("Batch", on_delete=models.CASCADE)
+    total_seats = models.PositiveIntegerField()
+    # Additional fields like assigned faculty, schedule, etc. can be added here
