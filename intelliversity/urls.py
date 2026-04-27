@@ -38,4 +38,5 @@ urlpatterns = [
     path("api/v1/profiles/", include("apps.profiles.urls")),
     path("api/v1/storage/", include("apps.storage.urls")),
     path("api/v1/tenants/", include("apps.tenants.urls")),
+    path("api/v1/academics/", include("apps.academics.urls")),
 ]
