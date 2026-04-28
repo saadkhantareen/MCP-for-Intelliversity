@@ -4,7 +4,6 @@ from apps.academics.views import (
     CourseViewSet,
     CurriculumViewSet,
     DepartmentViewSet,
-    SectionViewSet,
     ProgramViewSet,
 )
 
@@ -14,7 +13,6 @@ router.register(r"programs", ProgramViewSet, basename="program")
 router.register(r"courses", CourseViewSet, basename="course")
 router.register(r"curriculums", CurriculumViewSet, basename="curriculum")
 router.register(r"batches", BatchViewSet, basename="batch")
-router.register(r"sections", SectionViewSet, basename="section")
 
 urlpatterns = []
 

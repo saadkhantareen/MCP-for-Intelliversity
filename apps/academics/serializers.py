@@ -141,29 +141,66 @@ class CurriculumListSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "program", "total_credit_hours"]
 
 
+class SectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = ["id", "name", "total_seats"]
+
+
 class BatchSerializer(serializers.ModelSerializer):
     program = serializers.SlugRelatedField(
         queryset=Program.objects.all(),
         slug_field="code",
     )
     curriculum = serializers.PrimaryKeyRelatedField(queryset=Curriculum.objects.all())
+    sections = SectionSerializer(many=True)
 
     class Meta:
         model = Batch
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "program",
+            "curriculum",
+            "year",
+            "batch_type",
+            "start_date",
+            "end_date",
+            "is_active",
+            "max_students",
+            "sections",
+        ]
+
+    @transaction.atomic
+    def create(self, validated_data):
+        sections_data = validated_data.pop("sections")
+        batch = Batch.objects.create(**validated_data)
+
+        # Create all provided sections
+        section_instances = [Section(batch=batch, **data) for data in sections_data]
+        Section.objects.bulk_create(section_instances)
+        return batch
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        sections_data = validated_data.pop("sections", None)
+
+        # Update Batch main fields (Supports PATCH)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(update_fields=validated_data.keys())
+
+        # update sections
+        if sections_data is not None:
+            instance.sections.all().delete()
+            section_instances = [
+                Section(batch=instance, **data) for data in sections_data
+            ]
+            Section.objects.bulk_create(section_instances)
+
+        return instance
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["curriculum"] = instance.curriculum.name
         return data
-
-
-class SectionSerializer(serializers.ModelSerializer):
-    batch = serializers.SlugRelatedField(
-        queryset=Batch.objects.all(),
-        slug_field="name",
-    )
-
-    class Meta:
-        model = Section
-        fields = "__all__"

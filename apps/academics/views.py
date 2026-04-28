@@ -80,12 +80,13 @@ class CurriculumViewSet(ModelViewSet):
 
 
 class BatchViewSet(ModelViewSet):
-    queryset = Batch.objects.select_related("program", "curriculum")
+    queryset = (
+        Batch.objects.all()
+        .select_related("program", "curriculum")
+        .prefetch_related("sections")
+    )
     serializer_class = BatchSerializer
-    permission_classes = []
 
-
-class SectionViewSet(ModelViewSet):
-    queryset = Section.objects.select_related("batch")
-    serializer_class = SectionSerializer
-    permission_classes = []
+    # Example of simple RBAC integration
+    def get_permissions(self):
+        pass

@@ -142,6 +142,8 @@ class Batch(BaseModel):
 
 class Section(BaseModel):
     name = models.CharField(max_length=10)
-    batch = models.ForeignKey("Batch", on_delete=models.CASCADE)
+    batch = models.ForeignKey(
+        "Batch", on_delete=models.CASCADE, related_name="sections"
+    )
     total_seats = models.PositiveIntegerField()
     # Additional fields like assigned faculty, schedule, etc. can be added here
