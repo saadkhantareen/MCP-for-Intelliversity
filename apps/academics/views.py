@@ -1,20 +1,20 @@
 from rest_framework.viewsets import ModelViewSet
 from apps.academics.models import (
+    AcademicYear,
     Batch,
     Course,
     Curriculum,
     Department,
     Program,
-    Section,
 )
 from apps.academics.serializers import (
+    AcademicYearSerializer,
     BatchSerializer,
     CourseSerializer,
     CurriculumDetailSerializer,
     CurriculumListSerializer,
     DepartmentSerializer,
     ProgramSerializer,
-    SectionSerializer,
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -77,6 +77,12 @@ class CurriculumViewSet(ModelViewSet):
             return CurriculumListSerializer
         # Handles full nested data for create, retrieve, and update
         return CurriculumDetailSerializer
+
+
+class AcademicYearViewSet(ModelViewSet):
+    queryset = AcademicYear.objects.prefetch_related("term_set")
+    serializer_class = AcademicYearSerializer
+    permission_classes = []
 
 
 class BatchViewSet(ModelViewSet):

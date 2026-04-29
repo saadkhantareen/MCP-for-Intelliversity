@@ -15,8 +15,22 @@ class CourseType(models.TextChoices):
     GENERAL = "GEN", _("General Education")
 
 
-class BatchType(models.TextChoices):
+class TermType(models.TextChoices):
     FALL = "FALL", _("Fall")
     SPRING = "SPRING", _("Spring")
     SUMMER = "SUMMER", _("Summer")
     WINTER = "WINTER", _("Winter")
+
+
+class StudentTermStatus(models.TextChoices):
+    ENROLLED = "ENROLLED", _("Enrolled")
+    GRADUATED = "COMPLETED", _("Graduated")
+    DROPPED_OUT = "DROPPED_OUT", _("Dropped Out")
+    FAILED = "FAILED", _("Failed")
+
+
+class AcademicStanding(models.TextChoices):
+    GOOD = "GOOD", _("Good Standing")
+    PROBATION = "PROBATION", _("Academic Probation")
+    SUSPENDED = "SUSPENDED", _("Suspended")
+    EXPELLED = "EXPELLED", _("Expelled")

@@ -1,7 +1,12 @@
 from apps.core.models import BaseModel
 from django.db import models
-from apps.academics.choices import DegreeLevel
-from apps.academics.choices import CourseType, BatchType
+from apps.academics.choices import (
+    CourseType,
+    TermType,
+    AcademicStanding,
+    DegreeLevel,
+    StudentTermStatus,
+)
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -128,12 +133,54 @@ class ProgramCurriculum(BaseModel):
         ]
 
 
+class AcademicYear(BaseModel):
+    """
+    AcademicYear represents a full academic cycle, such as "2024-2025",
+    which typically includes multiple terms (semesters, trimesters, quarters).
+    according to the University's Config (tenant)
+    """
+
+    name = models.CharField(max_length=20)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=False)
+
+
+class Term(BaseModel):
+    """
+    Term represents a specific semester, such as "Fall 2024" or "Spring 2025",
+      within an academic year.
+    """
+
+    name = models.CharField(max_length=20)
+    academic_year = models.ForeignKey("AcademicYear", on_delete=models.CASCADE)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    term_type = models.CharField(max_length=10, choices=TermType.choices)
+    is_active = models.BooleanField(default=False)
+
+
 class Batch(BaseModel):
+    """
+    Batch represents a cohort of students admitted in a specific academic year
+    and enrolled in a particular program and curriculum.
+     For example, "Batch 2024" for students admitted in the academic year 2024-2025, enrolled in the BS Computer Science program with the 2024 curriculum.
+     Relationship:
+     With Program: M:1
+     With Curriculum: M:1
+     With Section: 1:M
+     With StudentProfile: 1:M
+    """
+
     name = models.CharField(max_length=10, unique=True)
     program = models.ForeignKey("Program", on_delete=models.CASCADE)
     curriculum = models.ForeignKey("Curriculum", on_delete=models.PROTECT)
-    year = models.PositiveIntegerField()
-    batch_type = models.CharField(max_length=10, choices=BatchType.choices)
+    start_academic_year = models.ForeignKey(
+        "AcademicYear",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="batches_starting",
+    )
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=True)
@@ -147,3 +194,32 @@ class Section(BaseModel):
     )
     total_seats = models.PositiveIntegerField()
     # Additional fields like assigned faculty, schedule, etc. can be added here
+
+
+class StudentTermRecord(models.Model):
+    """Model to track a student's academic progress in a specific term within their batch."""
+
+    student = models.ForeignKey("profiles.StudentProfile", on_delete=models.CASCADE)
+    term = models.ForeignKey("Term", on_delete=models.CASCADE)
+
+    status = models.CharField(
+        max_length=20,
+        choices=StudentTermStatus.choices,
+        default=StudentTermStatus.ENROLLED,
+    )
+    gpa = models.FloatField(default=0.0)
+    academic_standing = models.CharField(
+        max_length=30,
+        choices=AcademicStanding.choices,
+        null=True,
+        blank=True,
+        help_text="Academic standing based on GPA (e.g., Good, Probation, etc.)",
+    )
+
+    class Meta:
+        # unique constraint to ensure one record per student per term
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "term"], name="unique_student_term_record"
+            )
+        ]

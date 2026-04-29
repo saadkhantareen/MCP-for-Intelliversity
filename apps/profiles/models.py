@@ -63,15 +63,16 @@ class StudentProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="student_profile",
     )
+    batch = models.ForeignKey(
+        "academics.Batch",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="students",
+    )
     enrollment_number = models.CharField(
         _("enrollment number"), max_length=50, null=True, blank=True
     )
-    department = models.CharField(
-        _("department"), max_length=150, null=True, blank=True
-    )
-    program = models.CharField(_("program"), max_length=150, null=True, blank=True)
-    semester = models.PositiveIntegerField(_("semester"), null=True, blank=True)
-    batch_year = models.PositiveIntegerField(_("batch year"), null=True, blank=True)
     cgpa = models.DecimalField(
         _("CGPA"), max_digits=4, decimal_places=2, null=True, blank=True
     )

@@ -8,8 +8,15 @@ from apps.academics.models import (
     ProgramCurriculum,
     Program,
     Section,
+    AcademicYear,
+    Term,
 )
-from apps.academics.validators import validate_prerequisites
+from apps.academics.validators import (
+    validate_curriculum_courses,
+    validate_prerequisites,
+    validate_start_lte_end,
+    validate_term_dates_within_academic_year,
+)
 from django.db import transaction
 
 
@@ -102,6 +109,10 @@ class CurriculumDetailSerializer(serializers.ModelSerializer):
             "courses",
         ]
 
+    def validate(self, attrs):
+        attrs = validate_curriculum_courses(attrs)
+        return attrs
+
     @transaction.atomic
     def create(self, validated_data):
         courses_data = validated_data.pop("courses")
@@ -141,6 +152,55 @@ class CurriculumListSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "program", "total_credit_hours"]
 
 
+class TermSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        validate_start_lte_end(attrs)
+        return attrs
+
+    class Meta:
+        model = Term
+        fields = ["id", "name", "start_date", "end_date", "term_type", "is_active"]
+
+
+class AcademicYearSerializer(serializers.ModelSerializer):
+    terms = TermSerializer(many=True)
+
+    class Meta:
+        model = AcademicYear
+        fields = ["id", "name", "start_date", "end_date", "is_active", "terms"]
+
+    def validate(self, attrs):
+        validate_start_lte_end(attrs)
+        validate_term_dates_within_academic_year(attrs)
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        terms_data = validated_data.pop("terms", [])
+        academic_year = AcademicYear.objects.create(**validated_data)
+
+        Term.objects.bulk_create(
+            [Term(academic_year=academic_year, **item) for item in terms_data]
+        )
+        return academic_year
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        terms_data = validated_data.pop("terms", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save(update_fields=validated_data.keys())
+
+        if terms_data is not None:
+            # Replace all terms for this academic year
+            instance.term_set.all().delete()
+            Term.objects.bulk_create(
+                [Term(academic_year=instance, **item) for item in terms_data]
+            )
+        return instance
+
+
 class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
@@ -154,6 +214,10 @@ class BatchSerializer(serializers.ModelSerializer):
     )
     curriculum = serializers.PrimaryKeyRelatedField(queryset=Curriculum.objects.all())
     sections = SectionSerializer(many=True)
+    start_academic_year = serializers.SlugRelatedField(
+        queryset=AcademicYear.objects.all(),
+        slug_field="name",
+    )
 
     class Meta:
         model = Batch
@@ -162,8 +226,7 @@ class BatchSerializer(serializers.ModelSerializer):
             "name",
             "program",
             "curriculum",
-            "year",
-            "batch_type",
+            "start_academic_year",
             "start_date",
             "end_date",
             "is_active",
