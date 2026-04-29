@@ -1,4 +1,7 @@
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+
 from apps.academics.models import (
     AcademicYear,
     Batch,
@@ -16,8 +19,6 @@ from apps.academics.serializers import (
     DepartmentSerializer,
     ProgramSerializer,
 )
-from rest_framework.decorators import action
-from rest_framework.response import Response
 
 
 class DepartmentViewSet(ModelViewSet):

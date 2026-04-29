@@ -1,13 +1,14 @@
-from apps.core.models import BaseModel
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
 from apps.academics.choices import (
-    CourseType,
-    TermType,
     AcademicStanding,
+    CourseType,
     DegreeLevel,
     StudentTermStatus,
+    TermType,
 )
-from django.core.validators import MinValueValidator, MaxValueValidator
+from apps.core.models import BaseModel
 
 
 class Department(BaseModel):

@@ -1,14 +1,16 @@
+from django.db import transaction
 from rest_framework import serializers
+
 from apps.academics.models import (
-    Department,
+    AcademicYear,
     Batch,
     Course,
     CoursePrerequisite,
     Curriculum,
-    ProgramCurriculum,
+    Department,
     Program,
+    ProgramCurriculum,
     Section,
-    AcademicYear,
     Term,
 )
 from apps.academics.validators import (
@@ -17,7 +19,6 @@ from apps.academics.validators import (
     validate_start_lte_end,
     validate_term_dates_within_academic_year,
 )
-from django.db import transaction
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -75,7 +76,8 @@ class CourseSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         prerequisites = validated_data.pop("prerequisites", None)
-        course = super().update(instance, validated_data)
+        super().update(instance, validated_data)
+
         if prerequisites is not None:  # None = not provided, skip. [] = clear all
             self._set_prerequisites(instance, prerequisites)
         return instance
