@@ -1,4 +1,5 @@
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -8,6 +9,7 @@ from apps.academics.models import (
     Course,
     Curriculum,
     Department,
+    FacultyCourse,
     Program,
 )
 from apps.academics.serializers import (
@@ -17,6 +19,7 @@ from apps.academics.serializers import (
     CurriculumDetailSerializer,
     CurriculumListSerializer,
     DepartmentSerializer,
+    FacultyCourseSerializer,
     ProgramSerializer,
 )
 
@@ -24,9 +27,9 @@ from apps.academics.serializers import (
 class DepartmentViewSet(ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = (
-        []
-    )  # Set appropriate permissions (e.g., IsAuthenticated, IsAdminUser)
+    permission_classes = [
+        IsAuthenticated
+    ]  # Set appropriate permissions (e.g., IsAuthenticated, IsAdminUser)
 
     # def get_permissions(self):
     #     """
@@ -46,7 +49,7 @@ class DepartmentViewSet(ModelViewSet):
 class ProgramViewSet(ModelViewSet):
     queryset = Program.objects.all()
     serializer_class = ProgramSerializer
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"], url_path="codes")
     def codes(self, request):
@@ -59,7 +62,7 @@ class CourseViewSet(ModelViewSet):
         "prerequisites"
     )
     serializer_class = CourseSerializer
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["get"], url_path="prerequisites")
     def list_prerequisites(self, request, pk=None):
@@ -68,9 +71,15 @@ class CourseViewSet(ModelViewSet):
         return Response(codes)
 
 
+class FacultyCourseViewSet(ModelViewSet):
+    queryset = FacultyCourse.objects.select_related("faculty", "course")
+    serializer_class = FacultyCourseSerializer
+    permission_classes = [IsAuthenticated]
+
+
 class CurriculumViewSet(ModelViewSet):
     queryset = Curriculum.objects.all()
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         # Returns only curriculum instances for 'GET all'
@@ -83,7 +92,7 @@ class CurriculumViewSet(ModelViewSet):
 class AcademicYearViewSet(ModelViewSet):
     queryset = AcademicYear.objects.prefetch_related("term_set")
     serializer_class = AcademicYearSerializer
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
 
 class BatchViewSet(ModelViewSet):
@@ -93,7 +102,8 @@ class BatchViewSet(ModelViewSet):
         .prefetch_related("sections")
     )
     serializer_class = BatchSerializer
+    permission_classes = [IsAuthenticated]
 
     # Example of simple RBAC integration
-    def get_permissions(self):
-        pass
+    # def get_permissions(self):
+    #     pass

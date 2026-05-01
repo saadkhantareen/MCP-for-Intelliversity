@@ -24,7 +24,7 @@ class Department(BaseModel):
     )
     description = models.TextField(blank=True)
     head_of_department = models.OneToOneField(
-        "accounts.FacultyProfile",
+        "profiles.FacultyProfile",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -57,8 +57,8 @@ class Program(BaseModel):
         help_text="Unique code for the program (e.g., BSCS, MBA, etc.)",
     )
     degree_level = models.CharField(max_length=3, choices=DegreeLevel.choices)
-
-    total_credits_required = models.PositiveIntegerField()
+    total_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    total_credit_hours_required = models.PositiveIntegerField()
     number_of_semesters = models.PositiveIntegerField()
 
     class Meta:
@@ -75,7 +75,7 @@ class Course(BaseModel):
     department = models.ForeignKey(
         "Department", on_delete=models.CASCADE, related_name="courses"
     )
-    credits = models.PositiveIntegerField(
+    credit_hours = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(10)]
     )
     description = models.TextField()
@@ -134,6 +134,24 @@ class ProgramCurriculum(BaseModel):
         ]
 
 
+class FacultyCourse(BaseModel):
+    faculty = models.ForeignKey(
+        "profiles.FacultyProfile",
+        on_delete=models.CASCADE,
+        related_name="faculty_courses",
+    )
+    course = models.ForeignKey(
+        "Course", on_delete=models.CASCADE, related_name="assigned_faculty"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["faculty", "course"], name="unique_faculty_course_assignment"
+            )
+        ]
+
+
 class AcademicYear(BaseModel):
     """
     AcademicYear represents a full academic cycle, such as "2024-2025",
@@ -157,8 +175,21 @@ class Term(BaseModel):
     academic_year = models.ForeignKey("AcademicYear", on_delete=models.CASCADE)
     start_date = models.DateField()
     end_date = models.DateField()
+    course_registration_start_date = models.DateField()
+    course_registration_end_date = models.DateField()
+    course_drop_deadline = models.DateField()
+    fee_deadline = models.DateField()
     term_type = models.CharField(max_length=10, choices=TermType.choices)
     is_active = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_active"],
+                condition=models.Q(is_active=True),
+                name="unique_active_term",
+            )
+        ]
 
 
 class Batch(BaseModel):
@@ -197,7 +228,7 @@ class Section(BaseModel):
     # Additional fields like assigned faculty, schedule, etc. can be added here
 
 
-class StudentTermRecord(models.Model):
+class StudentTermRecord(BaseModel):
     """Model to track a student's academic progress in a specific term within their batch."""
 
     student = models.ForeignKey("profiles.StudentProfile", on_delete=models.CASCADE)
@@ -214,6 +245,7 @@ class StudentTermRecord(models.Model):
         choices=AcademicStanding.choices,
         null=True,
         blank=True,
+        default=AcademicStanding.GOOD,
         help_text="Academic standing based on GPA (e.g., Good, Probation, etc.)",
     )
 

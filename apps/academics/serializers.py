@@ -5,20 +5,22 @@ from apps.academics.models import (
     AcademicYear,
     Batch,
     Course,
-    CoursePrerequisite,
     Curriculum,
     Department,
+    FacultyCourse,
     Program,
     ProgramCurriculum,
     Section,
     Term,
 )
+from apps.academics.utils.utils import set_prerequisites
 from apps.academics.validators import (
     validate_curriculum_courses,
     validate_prerequisites,
     validate_start_lte_end,
     validate_term_dates_within_academic_year,
 )
+from apps.profiles.models import FacultyProfile
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -51,20 +53,22 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = "__all__"
+        fields = [
+            "id",
+            "code",
+            "name",
+            "description",
+            "credit_hours",
+            "department",
+            "prerequisites",
+        ]
 
     def validate(self, attrs):
         attrs = validate_prerequisites(self, attrs)
         return attrs
 
     def _set_prerequisites(self, course, prerequisites):
-        CoursePrerequisite.objects.filter(course=course).delete()
-        CoursePrerequisite.objects.bulk_create(
-            [
-                CoursePrerequisite(course=course, prerequisite_course=prereq)
-                for prereq in prerequisites
-            ]
-        )
+        set_prerequisites(self, course, prerequisites)
 
     @transaction.atomic
     def create(self, validated_data):
@@ -81,6 +85,21 @@ class CourseSerializer(serializers.ModelSerializer):
         if prerequisites is not None:  # None = not provided, skip. [] = clear all
             self._set_prerequisites(instance, prerequisites)
         return instance
+
+
+class FacultyCourseSerializer(serializers.ModelSerializer):
+    faculty = serializers.SlugRelatedField(
+        queryset=FacultyProfile.objects.all(),
+        slug_field="registration_id",
+    )
+    course = serializers.SlugRelatedField(
+        queryset=Course.objects.all(),
+        slug_field="code",
+    )
+
+    class Meta:
+        model = FacultyCourse
+        fields = ["id", "faculty", "course"]
 
 
 class ProgramCurriculumSerializer(serializers.ModelSerializer):
@@ -161,7 +180,18 @@ class TermSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Term
-        fields = ["id", "name", "start_date", "end_date", "term_type", "is_active"]
+        fields = [
+            "id",
+            "name",
+            "start_date",
+            "end_date",
+            "course_registration_start_date",
+            "course_registration_end_date",
+            "course_drop_deadline",
+            "fee_deadline",
+            "term_type",
+            "is_active",
+        ]
 
 
 class AcademicYearSerializer(serializers.ModelSerializer):
