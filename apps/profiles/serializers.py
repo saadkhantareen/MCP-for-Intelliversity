@@ -1,4 +1,5 @@
 from django.db import transaction
+from datetime import date
 from rest_framework import serializers
 
 from apps.accounts.serializers import RegisterSerializer
@@ -17,10 +18,10 @@ class BaseProfileSerializer(serializers.ModelSerializer):
     profile_picture_url = serializers.SerializerMethodField()
 
     class Meta:
-        model = BaseProfile
+        model  = BaseProfile
         fields = [
             "user",
-            "profile_picture_public_id",
+            "profile_picture_public_id",     # read only — generated from public_id
             "father_name",
             "date_of_birth",
             "gender",
@@ -35,6 +36,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             "bio",
             "profile_picture_url",
         ]
+
         extra_kwargs = {"profile_picture_public_id": {"write_only": True}}
 
     def get_profile_picture_url(self, obj):
@@ -43,6 +45,20 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             if obj.profile_picture_public_id
             else None
         )
+    
+    def validate_cnic(self, value):
+        return validate_cnic(value)
+
+    def validate_phone_number(self, value):
+        return validate_phone_number(value)
+
+    def validate_emergency_contact(self, value):
+        return validate_phone_number(value)
+
+    def validate_date_of_birth(self, value):
+        if value and value >= date.today():
+            raise serializers.ValidationError("Date of birth must be in the past.")
+        return value
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
@@ -57,7 +73,6 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         base_profile_data = validated_data.pop("base_profile")
         user_data = base_profile_data.pop("user")
-
         user = RegisterSerializer().create(user_data)
 
         base_profile = BaseProfile.objects.create(user=user, **base_profile_data)
@@ -69,7 +84,6 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", None)
         if base_profile_data:
-
             base_profile_serializer = BaseProfileSerializer(
                 instance.base_profile,
                 data=base_profile_data,
@@ -85,7 +99,7 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
 
     class Meta:
-        model = FacultyProfile
+        model  = FacultyProfile
         fields = [
             "id",
             "registration_id",
@@ -116,7 +130,6 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", None)
         if base_profile_data:
-
             base_profile_serializer = BaseProfileSerializer(
                 instance.base_profile,
                 data=base_profile_data,
@@ -127,7 +140,7 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-
+      
 class AdminProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
 
@@ -156,7 +169,6 @@ class AdminProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", None)
         if base_profile_data:
-
             base_profile_serializer = BaseProfileSerializer(
                 instance.base_profile,
                 data=base_profile_data,
@@ -165,34 +177,61 @@ class AdminProfileSerializer(serializers.ModelSerializer):
             base_profile_serializer.is_valid(raise_exception=True)
             base_profile_serializer.save()
 
+
         return super().update(instance, validated_data)
-
-
+          
 class DocumentSerializer(serializers.ModelSerializer):
-    base_profile = serializers.PrimaryKeyRelatedField(
-        queryset=BaseProfile.objects.all(),
-        write_only=True,
-    )
-    document_url = serializers.SerializerMethodField()
+    """
+    User's own document serializer.
+    'url' is a signed Cloudinary URL valid for 1 hour — for viewing the private file.
+    """
+    url = serializers.SerializerMethodField()
 
     class Meta:
-        model = Document
+        model  = Document
         fields = [
             "id",
             "document_type",
             "title",
+            "public_id",
+            "resource_type",
+            "url",
             "description",
             "is_verified",
-            "base_profile",
-            "document_public_id",
-            "document_url",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "is_verified"]
-        extra_kwargs = {"document_public_id": {"write_only": True}}
+        read_only_fields = ["id", "is_verified", "url", "created_at", "updated_at"]
 
-    def get_document_url(self, obj):
-        return (
-            get_private_asset_url(obj.document_public_id)
-            if obj.document_public_id
-            else None
+    def get_url(self, obj) -> str | None:
+        return get_private_asset_url(
+            public_id=obj.public_id,
+            resource_type=obj.resource_type,
         )
+
+
+class AdminDocumentSerializer(serializers.ModelSerializer):
+    """Admin can verify documents and view signed URLs."""
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = Document
+        fields = [
+            "id",
+            "document_type",
+            "title",
+            "public_id",
+            "resource_type",
+            "url",
+            "description",
+            "is_verified",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "url", "created_at", "updated_at"]
+
+    def get_url(self, obj) -> str | None:
+        return get_private_asset_url(
+            public_id=obj.public_id,
+            resource_type=obj.resource_type,
+        )          

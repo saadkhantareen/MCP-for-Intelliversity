@@ -17,7 +17,29 @@ from apps.profiles.serializers import (
     FacultyProfileSerializer,
     StudentProfileSerializer,
 )
+from apps.storage.utils import delete_cloudinary_asset
 
+# abdullah code ==
+User = get_user_model()
+
+# Role → (profile model, user serializer, admin serializer)
+ROLE_PROFILE_MAP = {
+    "student": (StudentProfile, StudentProfileSerializer, AdminStudentProfileSerializer),
+    "faculty": (FacultyProfile, FacultyProfileSerializer, AdminFacultyProfileSerializer),
+    "admin":   (AdminProfile,   AdminProfileSerializer,   AdminProfileSerializer),
+}
+
+
+def get_or_create_base_profile(user):
+    base_profile, _ = BaseProfile.objects.get_or_create(user=user)
+    return base_profile
+
+
+def get_or_create_role_profile(user, profile_model):
+    base_profile = get_or_create_base_profile(user)
+    profile, _ = profile_model.objects.get_or_create(base_profile=base_profile)
+    return profile
+# ==
 
 def get_user_role(user):
     role_names = set(user.groups.values_list("name", flat=True))
@@ -51,7 +73,6 @@ class MyProfileView(APIView):
             )
             serializer = AdminProfileSerializer(profile)
 
-        else:
             return Response(
                 {"detail": "User has no role."}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -79,83 +100,74 @@ class AdminProfileViewSet(ModelViewSet):
     queryset = AdminProfile.objects.select_related("base_profile__user")
 
 
-# class FacultyProfileView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = FacultyProfileSerializer
-
-#     def get(self, request, faculty_id):
-#         profile = FacultyProfile.objects.select_related(
-#             "base_profile__user", "department"
-#         ).get(id=faculty_id)
-#         serializer = self.serializer_class(profile)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-#     def post(self, request):
-#         serializer = self.serializer_class(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         faculty_profile = serializer.save()
-#         return Response(
-#             self.serializer_class(faculty_profile).data,
-#             status=status.HTTP_201_CREATED,
-#         )
-
-#     def patch(self, request, profile_id):
-#         profile = FacultyProfile.objects.select_related(
-#             "base_profile__user", "department"
-#         ).get(id=profile_id)
-#         serializer = self.serializer_class(profile, data=request.data, partial=True)
-#         serializer.is_valid(raise_exception=True)
-#         updated_profile = serializer.save()
-#         return Response(
-#             self.serializer_class(updated_profile).data, status=status.HTTP_200_OK
-#         )
-
-#     def delete(self, request, profile_id):
-#         profile = FacultyProfile.objects.get(id=profile_id)
-#         user = profile.base_profile.user
-#         user.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# class AdminProfileView(APIView):
-#     permission_classes = [IsAuthenticated]
-#     serializer_class = AdminProfileSerializer
-
-#     def get(self, request, admin_id):
-#         profile = AdminProfile.objects.select_related("base_profile__user").get(
-#             id=admin_id
-#         )
-#         serializer = self.serializer_class(profile)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-#     def post(self, request):
-#         serializer = self.serializer_class(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         admin_profile = serializer.save()
-#         return Response(
-#             self.serializer_class(admin_profile).data,
-#             status=status.HTTP_201_CREATED,
-#         )
-
-#     def patch(self, request, profile_id):
-#         profile = AdminProfile.objects.select_related("base_profile__user").get(
-#             id=profile_id
-#         )
-#         serializer = self.serializer_class(profile, data=request.data, partial=True)
-#         serializer.is_valid(raise_exception=True)
-#         updated_profile = serializer.save()
-#         return Response(
-#             self.serializer_class(updated_profile).data, status=status.HTTP_200_OK
-#         )
-
-#     def delete(self, request, profile_id):
-#         profile = AdminProfile.objects.get(id=profile_id)
-#         user = profile.base_profile.user
-#         user.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class DocumentViewSet(ModelViewSet):
+class DocumentView(APIView):
+    """
+    GET    /api/v1/profiles/documents/          → list own documents (with signed URLs)
+    POST   /api/v1/profiles/documents/          → save document after Cloudinary upload
+    DELETE /api/v1/profiles/documents/<doc_id>/ → delete own document
+    """
     permission_classes = [IsAuthenticated]
-    serializer_class = DocumentSerializer
-    queryset = Document.objects.select_related("base_profile__user").all()
+
+    def get(self, request):
+        base_profile = get_or_create_base_profile(request.user)
+        documents = Document.objects.filter(base_profile=base_profile)
+        serializer = DocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        base_profile = get_or_create_base_profile(request.user)
+        serializer = DocumentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(base_profile=base_profile)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, doc_id):
+        base_profile = get_or_create_base_profile(request.user)
+        try:
+            document = Document.objects.get(id=doc_id, base_profile=base_profile)
+        except Document.DoesNotExist:
+            return Response({"detail": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # delete from Cloudinary as well
+        delete_cloudinary_asset(document.public_id, resource_type=document.resource_type)
+        document.delete()
+        return Response({"detail": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminDocumentView(APIView):
+    """
+    Admin only.
+    GET  /api/v1/profiles/documents/admin/<user_id>/ → list user documents (with signed URLs)
+    POST /api/v1/profiles/documents/admin/<user_id>/ → upload document for user
+    """
+    def _is_admin(self, request):
+        return request.portal_name == "admin"
+
+    def get(self, request, user_id):
+        if not self._is_admin(request):
+            return Response({"detail": "Only admins can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        base_profile = get_or_create_base_profile(user)
+        documents = Document.objects.filter(base_profile=base_profile)
+        serializer = AdminDocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, user_id):
+        if not self._is_admin(request):
+            return Response({"detail": "Only admins can access this."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        base_profile = get_or_create_base_profile(user)
+        serializer = AdminDocumentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(base_profile=base_profile)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
