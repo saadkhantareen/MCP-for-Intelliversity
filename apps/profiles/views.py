@@ -3,9 +3,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from django.contrib.auth import get_user_model
 
 from apps.accounts.choices import Roles
 from apps.profiles.models import (
+    BaseProfile,
     AdminProfile,
     Document,
     FacultyProfile,
@@ -16,17 +18,17 @@ from apps.profiles.serializers import (
     DocumentSerializer,
     FacultyProfileSerializer,
     StudentProfileSerializer,
+    AdminDocumentSerializer,
 )
 from apps.storage.utils import delete_cloudinary_asset
 
-# abdullah code ==
 User = get_user_model()
 
-# Role → (profile model, user serializer, admin serializer)
+# Role (profile model, user serializer, admin serializer)
 ROLE_PROFILE_MAP = {
-    "student": (StudentProfile, StudentProfileSerializer, AdminStudentProfileSerializer),
-    "faculty": (FacultyProfile, FacultyProfileSerializer, AdminFacultyProfileSerializer),
-    "admin":   (AdminProfile,   AdminProfileSerializer,   AdminProfileSerializer),
+    "student": (StudentProfile, StudentProfileSerializer),
+    "faculty": (FacultyProfile, FacultyProfileSerializer),
+    "admin": (AdminProfile, AdminProfileSerializer),
 }
 
 
@@ -39,7 +41,7 @@ def get_or_create_role_profile(user, profile_model):
     base_profile = get_or_create_base_profile(user)
     profile, _ = profile_model.objects.get_or_create(base_profile=base_profile)
     return profile
-# ==
+
 
 def get_user_role(user):
     role_names = set(user.groups.values_list("name", flat=True))
@@ -106,6 +108,7 @@ class DocumentView(APIView):
     POST   /api/v1/profiles/documents/          → save document after Cloudinary upload
     DELETE /api/v1/profiles/documents/<doc_id>/ → delete own document
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -126,12 +129,19 @@ class DocumentView(APIView):
         try:
             document = Document.objects.get(id=doc_id, base_profile=base_profile)
         except Document.DoesNotExist:
-            return Response({"detail": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Document not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         # delete from Cloudinary as well
-        delete_cloudinary_asset(document.public_id, resource_type=document.resource_type)
+        delete_cloudinary_asset(
+            document.public_id, resource_type=document.resource_type
+        )
         document.delete()
-        return Response({"detail": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"detail": "Document deleted successfully."},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 class AdminDocumentView(APIView):
@@ -140,17 +150,23 @@ class AdminDocumentView(APIView):
     GET  /api/v1/profiles/documents/admin/<user_id>/ → list user documents (with signed URLs)
     POST /api/v1/profiles/documents/admin/<user_id>/ → upload document for user
     """
+
     def _is_admin(self, request):
         return request.portal_name == "admin"
 
     def get(self, request, user_id):
         if not self._is_admin(request):
-            return Response({"detail": "Only admins can access this."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only admins can access this."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         base_profile = get_or_create_base_profile(user)
         documents = Document.objects.filter(base_profile=base_profile)
@@ -159,12 +175,17 @@ class AdminDocumentView(APIView):
 
     def post(self, request, user_id):
         if not self._is_admin(request):
-            return Response({"detail": "Only admins can access this."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only admins can access this."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         base_profile = get_or_create_base_profile(user)
         serializer = AdminDocumentSerializer(data=request.data)

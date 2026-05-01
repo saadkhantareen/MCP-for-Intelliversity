@@ -15,7 +15,7 @@ class BaseProfile(BaseModel):
     )
     profile_picture_public_id = models.CharField(
         _("profile picture public id"), max_length=255, null=True, blank=True
-      
+    )
     # Personal Info
     father_name = models.CharField(
         _("father name"), max_length=150, null=True, blank=True

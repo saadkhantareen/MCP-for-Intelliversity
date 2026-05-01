@@ -3,10 +3,11 @@ from rest_framework.routers import DefaultRouter
 
 from apps.profiles.views import (
     AdminProfileViewSet,
-    DocumentViewSet,
     FacultyProfileViewSet,
     MyProfileView,
     StudentProfileViewSet,
+    DocumentView,
+    AdminDocumentView,
 )
 from apps.profiles.views_bulk import BulkUploadView, BulkUploadTemplateView
 
@@ -18,9 +19,12 @@ router.register(r"admin", AdminProfileViewSet, basename="admin-profile")
 
 
 urlpatterns = [
-
-    path('bulk-upload/', BulkUploadView.as_view(), name='bulk-upload'),
-    path('bulk-upload/template/', BulkUploadTemplateView.as_view(), name='bulk-upload-template'),
+    path("bulk-upload/", BulkUploadView.as_view(), name="bulk-upload"),
+    path(
+        "bulk-upload/template/",
+        BulkUploadTemplateView.as_view(),
+        name="bulk-upload-template",
+    ),
     # own profile
     path("me/", MyProfileView.as_view(), name="my-profile"),
     # documents — own

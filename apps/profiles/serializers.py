@@ -10,6 +10,7 @@ from apps.profiles.models import (
     FacultyProfile,
     StudentProfile,
 )
+from apps.profiles.validators import validate_cnic, validate_phone_number
 from apps.storage.utils import get_private_asset_url
 
 
