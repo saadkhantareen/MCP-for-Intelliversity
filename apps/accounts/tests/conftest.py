@@ -61,11 +61,11 @@ def tenant_setup():
     return uni, portal
 
 
-@pytest.fixture
-def tenant_client(tenant_setup):
-    client = APIClient()
-    client.defaults["HTTP_HOST"] = "student.fast.intelliversity.com"
-    return client
+# @pytest.fixture
+# def tenant_client(tenant_setup):
+#     client = APIClient()
+#     client.defaults["HTTP_HOST"] = "student.fast.intelliversity.com"
+#     return client
 
 
 # ... (Keep your other fixtures like mock_tenant_settings, bypass_tenant_db_routing, setup_roles, tenant_setup) ...

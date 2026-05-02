@@ -14,13 +14,13 @@ def validate_prerequisites(self, attrs):
         # Check against instance (for Updates)
         if current_instance and p.pk == current_instance.pk:
             raise serializers.ValidationError(
-                {"prerequisites": "A course cannotbe its own prerequisite."}
+                {"prerequisites": "A course cannot be its own prerequisite."}
             )
 
         # Check against incoming code (for Creationor if code is being changed)
         if incoming_code and p.code == incoming_code:
             raise serializers.ValidationError(
-                {"prerequisites": "A course cannotbe its own prerequisite."}
+                {"prerequisites": "A course cannot be its own prerequisite."}
             )
     return attrs
 

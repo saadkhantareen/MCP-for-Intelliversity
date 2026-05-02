@@ -59,7 +59,7 @@ class Program(BaseModel):
     degree_level = models.CharField(max_length=3, choices=DegreeLevel.choices)
     total_fee = models.DecimalField(max_digits=10, decimal_places=2)
     total_credit_hours_required = models.PositiveIntegerField()
-    number_of_semesters = models.PositiveIntegerField()
+    number_of_semesters = models.PositiveIntegerField(MinValueValidator(1))
 
     class Meta:
         verbose_name = "Program"

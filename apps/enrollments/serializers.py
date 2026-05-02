@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.academics.models import Course, ProgramCurriculum, Section, Term
-from apps.enrollments.models import FacultyCourseEnrollement, StudentCourseEnrollment
+from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
 from apps.profiles.models import FacultyProfile
 
 
@@ -22,7 +22,7 @@ class OfferedCourseSerializer(serializers.ModelSerializer):
         ]
 
 
-class FacultyCourseEnrollementSerializer(serializers.ModelSerializer):
+class FacultyCourseEnrollmentSerializer(serializers.ModelSerializer):
     faculty = serializers.SlugRelatedField(
         queryset=FacultyProfile.objects.all(),
         slug_field="registration_id",
@@ -39,7 +39,7 @@ class FacultyCourseEnrollementSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = FacultyCourseEnrollement
+        model = FacultyCourseEnrollment
         fields = ["id", "faculty", "course", "term", "section"]
 
 
@@ -52,6 +52,7 @@ class StudentCourseEnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentCourseEnrollment
         fields = ["id", "student", "course", "term"]
+        read_only_fields = ["student", "term"]
 
     def create(self, validated_data):
         student_profile = self.context["request"].user.profile.student_profile
@@ -62,19 +63,3 @@ class StudentCourseEnrollmentSerializer(serializers.ModelSerializer):
 
         return super().create(validated_data)
 
-    def delete(self):
-        student_profile = self.context["request"].user.profile.student_profile
-        active_term = Term.objects.filter(is_active=True).first()
-
-        course_code = self.validated_data["course"]
-        course = Course.objects.get(code=course_code)
-
-        enrollment = StudentCourseEnrollment.objects.filter(
-            student=student_profile,
-            course=course,
-            term=active_term,
-            section=self.validated_data["section"],
-        ).first()
-
-        if enrollment:
-            enrollment.delete()

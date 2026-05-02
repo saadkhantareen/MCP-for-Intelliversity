@@ -1,13 +1,13 @@
-from requests import Response
+from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from apps.academics.models import ProgramCurriculum, Section, Term
-from apps.enrollments.models import FacultyCourseEnrollement, StudentCourseEnrollment
+from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
 from apps.enrollments.serializers import (
-    FacultyCourseEnrollementSerializer,
+    FacultyCourseEnrollmentSerializer,
     OfferedCourseSerializer,
     StudentCourseEnrollmentSerializer,
 )
@@ -40,13 +40,13 @@ class GetCoursesForFacultyEnrollementView(APIView):
 
 
 class FacultyCourseEnrollementViewSet(ModelViewSet):
-    queryset = FacultyCourseEnrollement.objects.select_related(
+    queryset = FacultyCourseEnrollment.objects.select_related(
         "faculty",
         "course",
         "term",
         "section",
     )
-    serializer_class = FacultyCourseEnrollementSerializer
+    serializer_class = FacultyCourseEnrollmentSerializer
     permission_classes = [IsAuthenticated]
 
 
@@ -89,26 +89,6 @@ class StudentCourseEnrollmentListCreateAPIView(APIView):
         return Response(
             self.serializer_class(enrollment).data,
             status=status.HTTP_201_CREATED,
-        )
-
-    def delete(self, request, pk):
-        student_profile = request.user.profile.student_profile
-        active_term = Term.objects.filter(is_active=True).first()
-
-        try:
-            enrollment = StudentCourseEnrollment.objects.get(
-                id=pk, student=student_profile, term=active_term
-            )
-        except StudentCourseEnrollment.DoesNotExist:
-            return Response(
-                {"detail": "Enrollment not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        enrollment.delete()
-
-        return Response(
-            {"message": "Course DROPPED successfully"},
-            status=status.HTTP_204_NO_CONTENT,
         )
 
 

@@ -31,7 +31,7 @@ class BaseProfile(BaseModel):
     nationality = models.CharField(
         _("nationality"), max_length=100, null=True, blank=True
     )
-    cnic     = models.CharField(_("CNIC"), max_length=15, null=True, blank=True)
+    cnic = models.CharField(_("CNIC"), max_length=15, null=True, blank=True)
     religion = models.CharField(_("religion"), max_length=50, null=True, blank=True)
 
     # Contact Info
@@ -42,14 +42,14 @@ class BaseProfile(BaseModel):
         _("emergency contact"), max_length=20, null=True, blank=True
     )
     address = models.TextField(_("address"), null=True, blank=True)
-    city    = models.CharField(_("city"), max_length=100, null=True, blank=True)
+    city = models.CharField(_("city"), max_length=100, null=True, blank=True)
     country = models.CharField(_("country"), max_length=100, null=True, blank=True)
 
     # Bio
     bio = models.TextField(_("bio"), null=True, blank=True)
 
     class Meta:
-        verbose_name        = _("base profile")
+        verbose_name = _("base profile")
         verbose_name_plural = _("base profiles")
 
     def __str__(self):
@@ -73,7 +73,7 @@ class StudentProfile(BaseModel):
     )
 
     class Meta:
-        verbose_name        = _("student profile")
+        verbose_name = _("student profile")
         verbose_name_plural = _("student profiles")
 
     def __str__(self):
@@ -114,7 +114,7 @@ class FacultyProfile(BaseModel):
     )
 
     class Meta:
-        verbose_name        = _("faculty profile")
+        verbose_name = _("faculty profile")
         verbose_name_plural = _("faculty profiles")
 
     def __str__(self):
@@ -127,12 +127,18 @@ class AdminProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="admin_profile",
     )
-    designation     = models.CharField(_("designation"), max_length=150, null=True, blank=True)
-    office_number   = models.CharField(_("office number"), max_length=20, null=True, blank=True)
-    office_location = models.CharField(_("office location"), max_length=150, null=True, blank=True)
+    designation = models.CharField(
+        _("designation"), max_length=150, null=True, blank=True
+    )
+    office_number = models.CharField(
+        _("office number"), max_length=20, null=True, blank=True
+    )
+    office_location = models.CharField(
+        _("office location"), max_length=150, null=True, blank=True
+    )
 
     class Meta:
-        verbose_name        = _("admin profile")
+        verbose_name = _("admin profile")
         verbose_name_plural = _("admin profiles")
 
     def __str__(self):
@@ -153,6 +159,7 @@ class Document(BaseModel):
         - Signed URL (1 hour valid) is auto-generated in every
           document serializer response as the 'url' field.
     """
+
     base_profile = models.ForeignKey(
         BaseProfile,
         on_delete=models.CASCADE,
@@ -165,18 +172,20 @@ class Document(BaseModel):
     )
     title = models.CharField(_("title"), max_length=255)
 
-    # Cloudinary public_id — saved after upload, used to generate signed URLs
-    public_id     = models.CharField(_("cloudinary public id"), max_length=500, blank=True, default="")
-    resource_type = models.CharField(_("resource type"), max_length=20, default="raw")  # raw / image / video
+    resource_type = models.CharField(
+        _("resource type"), max_length=20, default="raw"
+    )  # raw / image / video
 
     description = models.TextField(_("description"), null=True, blank=True)
     is_verified = models.BooleanField(_("is verified"), default=False)
+
+    # Cloudinary public_id — saved after upload, used to generate signed URLs
     document_public_id = models.CharField(
         _("document public id"), max_length=255, null=True, blank=True
     )
 
     class Meta:
-        verbose_name        = _("document")
+        verbose_name = _("document")
         verbose_name_plural = _("documents")
 
     def __str__(self):

@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from apps.academics.models import StudentTermRecord, Term
 from apps.finance.choices import PaidStatus
 from apps.finance.models import StudentFeeInvoice
+from apps.academics.utils.generate_invoice import generate_secure_invoice_number
 
 
 @receiver(pre_save, sender=Term)
@@ -37,4 +38,5 @@ def create_student_fee_invoice(sender, instance, created, **kwargs):
         payment_status=PaidStatus.PENDING,
         fee_type="tuition",
         due_date=instance.term.fee_deadline,
+        invoice_number=generate_secure_invoice_number(),
     )

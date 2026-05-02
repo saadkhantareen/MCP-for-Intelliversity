@@ -36,10 +36,10 @@ class GlobalUploadSignatureSerializer(serializers.Serializer):
                 {"asset_category": f"No access mapping defined for '{asset_category}'."}
             )
 
-        attrs["asset_category"]       = asset_category
+        attrs["asset_category"] = asset_category
         attrs["university_subdomain"] = university_portal.university.subdomain
-        attrs["portal_name"]          = university_portal.portal.name
-        attrs["access"]               = access
+        attrs["portal_name"] = university_portal.portal.name
+        attrs["access"] = access
 
         return attrs
 
@@ -72,10 +72,10 @@ class UploadSignatureSerializer(serializers.Serializer):
                 {"asset_category": f"No access mapping defined for '{asset_category}'."}
             )
 
-        attrs["asset_category"]       = asset_category
+        attrs["asset_category"] = asset_category
         attrs["university_subdomain"] = request.university.subdomain
-        attrs["portal_name"]          = request.portal_name
-        attrs["access"]               = access
+        attrs["portal_name"] = request.portal_name
+        attrs["access"] = access
 
         return attrs
 
@@ -92,24 +92,25 @@ class UploadSignatureSerializer(serializers.Serializer):
         )
 
 
-class PrivateAssetUrlSerializer(serializers.Serializer):
-    """
-    Takes a Cloudinary public_id of a private asset and
-    returns a signed time-limited URL valid for 1 hour.
+# class PrivateAssetUrlSerializer(serializers.Serializer):
+#     """
+#     Takes a Cloudinary public_id of a private asset and
+#     returns a signed time-limited URL valid for 1 hour.
 
-    Used when a user wants to view their private documents.
+#     Used when a user wants to view their private documents.
 
-    Request:  { "public_id": "universities/fast/admin/private/document/abc123", "resource_type": "raw" }
-    Response: { "url": "https://res.cloudinary.com/...?signature=...&expires_at=..." }
-    """
-    public_id     = serializers.CharField()
-    resource_type = serializers.ChoiceField(
-        choices=["image", "video", "raw"],
-        default="raw",
-    )
+#     Request:  { "public_id": "universities/fast/admin/private/document/abc123", "resource_type": "raw" }
+#     Response: { "url": "https://res.cloudinary.com/...?signature=...&expires_at=..." }
+#     """
 
-    def get_signed_url(self) -> str:
-        return get_private_asset_url(
-            public_id=self.validated_data["public_id"],
-            resource_type=self.validated_data["resource_type"],
-        )
+#     public_id = serializers.CharField()
+#     resource_type = serializers.ChoiceField(
+#         choices=["image", "video", "raw"],
+#         default="raw",
+#     )
+
+#     def get_signed_url(self) -> str:
+#         return get_private_asset_url(
+#             public_id=self.validated_data["public_id"],
+#             resource_type=self.validated_data["resource_type"],
+#         )

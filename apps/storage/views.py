@@ -67,7 +67,7 @@ class UploadSignatureView(APIView):
         return Response(serializer.get_upload_params())
 
 
-class PrivateAssetUrlView(APIView):
+# class PrivateAssetUrlView(APIView):
     """
     POST /uploads/private-url/
 

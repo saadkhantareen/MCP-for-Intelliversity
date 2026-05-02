@@ -53,14 +53,12 @@ def validate_recaptcha(token):
             timeout=5,
         )
         result = response.json()
-        print("RECAPTCHA RESULT:", result)
+        
     except requests.RequestException as e:
-        print(f"RECAPTCHA REQUEST ERROR: {str(e)}")
         raise ValidationError("reCAPTCHA verification failed. Please try again.")
 
     if not result.get("success"):
         error_codes = result.get("error-codes", [])
-        print(f"RECAPTCHA ERROR CODES: {error_codes}")
         raise ValidationError("reCAPTCHA verification failed. Invalid or expired token.")
 
     score = result.get("score", 0)

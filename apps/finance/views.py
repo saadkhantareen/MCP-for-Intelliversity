@@ -14,9 +14,12 @@ class StudentFeeInvoicePdfView(APIView):
 
     def get(self, request):
         student_id = request.user.profile.student_profile.id
-        invoice = StudentFeeInvoice.objects.select_related(
-            "student", "student_term_record"
-        ).get(student_id=student_id)
+        invoice = (
+            StudentFeeInvoice.objects.select_related("student", "student_term_record")
+            .get(student_id=student_id)
+            .order_by("-created_at")
+            .first()
+        )
 
         html = render_to_string(
             "finance/student_fee_invoice.html",
@@ -34,7 +37,7 @@ class StudentFeeInvoicePdfView(APIView):
 class StudentFeeInvoiceHtmlView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, invoice_id):
+    def get(self, request):
         student_id = request.user.profile.student_profile.id
         current_term_record_id = (
             StudentTermRecord.objects.filter(
@@ -49,5 +52,5 @@ class StudentFeeInvoiceHtmlView(APIView):
         ).get(student_id=student_id, student_term_record_id=current_term_record_id)
 
         return render(
-            request, "templates/finance/student_fee_invoice.html", {"invoice": invoice}
+            request, "finance/student_fee_invoice.html", {"invoice": invoice}
         )

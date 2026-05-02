@@ -11,7 +11,7 @@ from apps.profiles.models import (
     StudentProfile,
 )
 from apps.profiles.validators import validate_cnic, validate_phone_number
-from apps.storage.utils import get_private_asset_url
+from apps.storage.utils import get_private_asset_url, get_public_asset_url
 
 
 class BaseProfileSerializer(serializers.ModelSerializer):
@@ -19,10 +19,10 @@ class BaseProfileSerializer(serializers.ModelSerializer):
     profile_picture_url = serializers.SerializerMethodField()
 
     class Meta:
-        model  = BaseProfile
+        model = BaseProfile
         fields = [
             "user",
-            "profile_picture_public_id",     # read only — generated from public_id
+            "profile_picture_public_id",  # read only — generated from public_id
             "father_name",
             "date_of_birth",
             "gender",
@@ -42,11 +42,11 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
     def get_profile_picture_url(self, obj):
         return (
-            get_private_asset_url(obj.profile_picture_public_id)
+            get_public_asset_url(obj.profile_picture_public_id)
             if obj.profile_picture_public_id
             else None
         )
-    
+
     def validate_cnic(self, value):
         return validate_cnic(value)
 
@@ -100,7 +100,7 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
 
     class Meta:
-        model  = FacultyProfile
+        model = FacultyProfile
         fields = [
             "id",
             "registration_id",
@@ -141,7 +141,7 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-      
+
 class AdminProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
 
@@ -178,23 +178,24 @@ class AdminProfileSerializer(serializers.ModelSerializer):
             base_profile_serializer.is_valid(raise_exception=True)
             base_profile_serializer.save()
 
-
         return super().update(instance, validated_data)
-          
+
+
 class DocumentSerializer(serializers.ModelSerializer):
     """
     User's own document serializer.
     'url' is a signed Cloudinary URL valid for 1 hour — for viewing the private file.
     """
+
     url = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Document
+        model = Document
         fields = [
             "id",
             "document_type",
             "title",
-            "public_id",
+            "document_public_id",
             "resource_type",
             "url",
             "description",
@@ -206,22 +207,23 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     def get_url(self, obj) -> str | None:
         return get_private_asset_url(
-            public_id=obj.public_id,
+            public_id=obj.document_public_id,
             resource_type=obj.resource_type,
         )
 
 
 class AdminDocumentSerializer(serializers.ModelSerializer):
     """Admin can verify documents and view signed URLs."""
+
     url = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Document
+        model = Document
         fields = [
             "id",
             "document_type",
             "title",
-            "public_id",
+            "document_public_id",
             "resource_type",
             "url",
             "description",
@@ -233,6 +235,6 @@ class AdminDocumentSerializer(serializers.ModelSerializer):
 
     def get_url(self, obj) -> str | None:
         return get_private_asset_url(
-            public_id=obj.public_id,
+            public_id=obj.document_public_id,
             resource_type=obj.resource_type,
-        )          
+        )

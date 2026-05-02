@@ -2,7 +2,7 @@ from apps.core.models import BaseModel
 from django.db import models
 
 
-class FacultyCourseEnrollement(BaseModel):
+class FacultyCourseEnrollment(BaseModel):
     faculty = models.ForeignKey(
         "profiles.FacultyProfile",
         on_delete=models.CASCADE,

@@ -24,13 +24,6 @@ from apps.storage.utils import delete_cloudinary_asset
 
 User = get_user_model()
 
-# Role (profile model, user serializer, admin serializer)
-ROLE_PROFILE_MAP = {
-    "student": (StudentProfile, StudentProfileSerializer),
-    "faculty": (FacultyProfile, FacultyProfileSerializer),
-    "admin": (AdminProfile, AdminProfileSerializer),
-}
-
 
 def get_or_create_base_profile(user):
     base_profile, _ = BaseProfile.objects.get_or_create(user=user)
@@ -57,6 +50,12 @@ class MyProfileView(APIView):
     def get(self, request):
         role = get_user_role(request.user)
 
+        if role is None:
+            return Response(
+                {"detail": "User has no role."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if role == Roles.STUDENT:
             profile = StudentProfile.objects.select_related(
                 "base_profile__user", "section"
@@ -75,12 +74,9 @@ class MyProfileView(APIView):
             )
             serializer = AdminProfileSerializer(profile)
 
-            return Response(
-                {"detail": "User has no role."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
         return Response(
-            {"role": role, "profile": serializer.data}, status=status.HTTP_200_OK
+            {"role": role, "profile": serializer.data},
+            status=status.HTTP_200_OK,
         )
 
 
