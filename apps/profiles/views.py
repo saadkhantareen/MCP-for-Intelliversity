@@ -4,6 +4,8 @@ from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
 from apps.accounts.choices import Roles
 from apps.profiles.models import (
@@ -24,17 +26,6 @@ from apps.profiles.serializers import (
 from apps.storage.utils import delete_cloudinary_asset
 
 User = get_user_model()
-
-
-def get_or_create_base_profile(user):
-    base_profile, _ = BaseProfile.objects.get_or_create(user=user)
-    return base_profile
-
-
-def get_or_create_role_profile(user, profile_model):
-    base_profile = get_or_create_base_profile(user)
-    profile, _ = profile_model.objects.get_or_create(base_profile=base_profile)
-    return profile
 
 
 def get_user_role(user):
@@ -109,21 +100,33 @@ class DocumentView(APIView):
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
 
     def get(self, request):
-        base_profile = get_or_create_base_profile(request.user)
+        base_profile = BaseProfile.objects.get(user=request.user)
         documents = Document.objects.filter(base_profile=base_profile)
         serializer = DocumentSerializer(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        base_profile = get_or_create_base_profile(request.user)
+        base_profile = BaseProfile.objects.get(user=request.user)
         serializer = DocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(base_profile=base_profile)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def delete(self, request, doc_id):
-        base_profile = get_or_create_base_profile(request.user)
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="doc_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Document ID to delete",
+                required=True,
+            )
+        ]
+    )
+    def delete(self, request):
+        base_profile = BaseProfile.objects.get(user=request.user)
         try:
+            doc_id = request.query_params.get("doc_id")
             document = Document.objects.get(id=doc_id, base_profile=base_profile)
         except Document.DoesNotExist:
             return Response(
@@ -132,7 +135,7 @@ class DocumentView(APIView):
 
         # delete from Cloudinary as well
         delete_cloudinary_asset(
-            document.public_id, resource_type=document.resource_type
+            document.document_public_id, resource_type=document.resource_type
         )
         document.delete()
         return Response(
@@ -168,7 +171,7 @@ class AdminDocumentView(APIView):
                 {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        base_profile = get_or_create_base_profile(user)
+        base_profile = BaseProfile.objects.get(user=user)
         documents = Document.objects.filter(base_profile=base_profile)
         serializer = self.serializer_class(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -187,7 +190,7 @@ class AdminDocumentView(APIView):
                 {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        base_profile = get_or_create_base_profile(user)
+        base_profile = BaseProfile.objects.get(user=user)
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(base_profile=base_profile)

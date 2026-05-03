@@ -25,11 +25,8 @@ urlpatterns = [
         BulkUploadTemplateView.as_view(),
         name="bulk-upload-template",
     ),
-    # own profile
     path("me/", MyProfileView.as_view(), name="my-profile"),
-    # documents — own
     path("documents/", DocumentView.as_view(), name="documents"),
-    path("documents/<uuid:doc_id>/", DocumentView.as_view(), name="document-delete"),
     # documents — admin
     path(
         "documents/admin/<uuid:user_id>/",

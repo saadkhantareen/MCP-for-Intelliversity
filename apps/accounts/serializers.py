@@ -76,11 +76,6 @@ class LoginSerializer(serializers.Serializer):
         # Validate recaptcha first
         recaptcha_token = attrs.pop("recaptcha_token", None)
 
-        if not recaptcha_token:
-            raise serializers.ValidationError(
-                "reCAPTCHA token is required. Please complete the reCAPTCHA."
-            )
-
         try:
             validate_recaptcha(recaptcha_token)
         except serializers.ValidationError as e:

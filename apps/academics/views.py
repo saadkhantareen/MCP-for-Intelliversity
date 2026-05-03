@@ -80,7 +80,7 @@ class CurriculumViewSet(ModelViewSet):
 
 
 class AcademicYearViewSet(ModelViewSet):
-    queryset = AcademicYear.objects.prefetch_related("term_set")
+    queryset = AcademicYear.objects.prefetch_related("terms")
     serializer_class = AcademicYearSerializer
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
 

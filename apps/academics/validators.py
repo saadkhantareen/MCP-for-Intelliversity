@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.academics.models import Term
 
 
 def validate_prerequisites(self, attrs):
@@ -67,4 +68,47 @@ def validate_term_dates_within_academic_year(attrs):
                     "terms": "Term dates must be within the academic year's start and end dates."
                 }
             )
+    return attrs
+
+
+def validate_only_one_active_term(attrs, instance=None):
+    terms_data = attrs.get("terms", [])
+    active_terms_in_payload = [t for t in terms_data if t.get("is_active")]
+
+    if len(active_terms_in_payload) > 1:
+        raise serializers.ValidationError(
+            {"terms": "Only one term can be active at a time."}
+        )
+
+    if any(t.get("is_active") for t in terms_data):
+        if Term.objects.filter(is_active=True).exists():
+            if not instance:
+                raise serializers.ValidationError(
+                    {"terms": "An active term already exists in the system."}
+                )
+
+    return attrs
+
+
+def validate_sections_seats(attrs, instance=None):
+    sections_data = attrs.get("sections", [])
+    max_students = attrs.get("max_students")
+
+    # If max_students isn't in the request (e.g., a PATCH request),
+    # get it from the existing instance if it exists.
+    if max_students is None and instance:
+        max_students = instance.max_students
+
+    total_section_seats = sum(
+        section.get("total_seats", 0) for section in sections_data
+    )
+
+    if max_students is not None and total_section_seats > max_students:
+        raise serializers.ValidationError(
+            {
+                "sections": f"The total seats in sections ({total_section_seats}) "
+                f"cannot exceed the batch's maximum students capacity ({max_students})."
+            }
+        )
+
     return attrs

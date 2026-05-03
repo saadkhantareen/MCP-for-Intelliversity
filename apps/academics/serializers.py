@@ -19,6 +19,8 @@ from apps.academics.validators import (
     validate_prerequisites,
     validate_start_lte_end,
     validate_term_dates_within_academic_year,
+    validate_only_one_active_term,
+    validate_sections_seats,
 )
 from apps.profiles.models import FacultyProfile
 
@@ -204,6 +206,7 @@ class AcademicYearSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         validate_start_lte_end(attrs)
         validate_term_dates_within_academic_year(attrs)
+        validate_only_one_active_term(attrs, self.instance)
         return attrs
 
     @transaction.atomic
@@ -246,9 +249,8 @@ class BatchSerializer(serializers.ModelSerializer):
     )
     curriculum = serializers.PrimaryKeyRelatedField(queryset=Curriculum.objects.all())
     sections = SectionSerializer(many=True)
-    start_academic_year = serializers.SlugRelatedField(
-        queryset=AcademicYear.objects.all(),
-        slug_field="name",
+    start_academic_year = serializers.PrimaryKeyRelatedField(
+        queryset=AcademicYear.objects.all(), allow_null=True
     )
 
     class Meta:
@@ -265,6 +267,11 @@ class BatchSerializer(serializers.ModelSerializer):
             "max_students",
             "sections",
         ]
+
+    def validate(self, attrs):
+        validate_start_lte_end(attrs)
+        validate_sections_seats(attrs, self.instance)
+        return attrs
 
     @transaction.atomic
     def create(self, validated_data):
