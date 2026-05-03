@@ -201,7 +201,6 @@ class Batch(BaseModel):
      With Program: M:1
      With Curriculum: M:1
      With Section: 1:M
-     With StudentProfile: 1:M
     """
 
     name = models.CharField(max_length=10, unique=True)

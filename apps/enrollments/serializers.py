@@ -55,7 +55,7 @@ class StudentCourseEnrollmentSerializer(serializers.ModelSerializer):
         read_only_fields = ["student", "term"]
 
     def create(self, validated_data):
-        student_profile = self.context["request"].user.profile.student_profile
+        student_profile = self.context["request"].user.base_profile.student_profile
         active_term = Term.objects.filter(is_active=True).first()
 
         validated_data["student"] = student_profile

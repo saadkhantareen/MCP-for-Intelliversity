@@ -1,19 +1,20 @@
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
 from rest_framework.views import APIView
 from weasyprint import HTML
 
 from apps.academics.models import StudentTermRecord
 from apps.finance.models import StudentFeeInvoice
+from apps.profiles.permissions import IsOwnerOrAdmin
 
 
 class StudentFeeInvoicePdfView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
 
     def get(self, request):
-        student_id = request.user.profile.student_profile.id
+        student_id = request.user.base_profile.student_profile.id
         invoice = (
             StudentFeeInvoice.objects.select_related("student", "student_term_record")
             .get(student_id=student_id)
@@ -35,10 +36,10 @@ class StudentFeeInvoicePdfView(APIView):
 
 
 class StudentFeeInvoiceHtmlView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
 
     def get(self, request):
-        student_id = request.user.profile.student_profile.id
+        student_id = request.user.base_profile.student_profile.id
         current_term_record_id = (
             StudentTermRecord.objects.filter(
                 student_id=student_id, term__is_active=True
@@ -51,6 +52,4 @@ class StudentFeeInvoiceHtmlView(APIView):
             "student", "student_term_record"
         ).get(student_id=student_id, student_term_record_id=current_term_record_id)
 
-        return render(
-            request, "finance/student_fee_invoice.html", {"invoice": invoice}
-        )
+        return render(request, "finance/student_fee_invoice.html", {"invoice": invoice})

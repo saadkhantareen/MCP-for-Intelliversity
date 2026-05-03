@@ -57,6 +57,7 @@ class Command(BaseCommand):
         for university in universities:
             # define db_key outside so that, it cannot cause error at finally.
             db_key = None
+
             try:
                 db_key = ensure_tenant_db_configured(university)
 
@@ -89,8 +90,8 @@ class Command(BaseCommand):
                 # Faculty can view general academic structures and student profiles
                 faculty_view_models = academic_structure_models + [StudentProfile]
                 for model in faculty_view_models:
-                    ct = ContentType.objects.get_for_model(model)
-                    view_perm = Permission.objects.get(
+                    ct = ContentType.objects.using(db_key).get_for_model(model)
+                    view_perm = Permission.objects.using(db_key).get(
                         codename=f"view_{model._meta.model_name}", content_type=ct
                     )
                     faculty_group.permissions.add(view_perm)
@@ -103,15 +104,15 @@ class Command(BaseCommand):
                     FacultyProfile,
                 ]
                 for model in faculty_manage_models:
-                    ct = ContentType.objects.get_for_model(model)
+                    ct = ContentType.objects.using(db_key).get_for_model(model)
                     faculty_group.permissions.add(
-                        Permission.objects.get(
+                        Permission.objects.using(db_key).get(
                             codename=f"view_{model._meta.model_name}", content_type=ct
                         ),
-                        Permission.objects.get(
+                        Permission.objects.using(db_key).get(
                             codename=f"add_{model._meta.model_name}", content_type=ct
                         ),
-                        Permission.objects.get(
+                        Permission.objects.using(db_key).get(
                             codename=f"change_{model._meta.model_name}", content_type=ct
                         ),
                     )
@@ -123,8 +124,8 @@ class Command(BaseCommand):
                     StudentFeeInvoice,
                 ]
                 for model in student_view_models:
-                    ct = ContentType.objects.get_for_model(model)
-                    view_perm = Permission.objects.get(
+                    ct = ContentType.objects.using(db_key).get_for_model(model)
+                    view_perm = Permission.objects.using(db_key).get(
                         codename=f"view_{model._meta.model_name}", content_type=ct
                     )
                     student_group.permissions.add(view_perm)
@@ -132,21 +133,21 @@ class Command(BaseCommand):
                 # Students can manage (add/change/view) their own enrollments and profiles
                 student_manage_models = [StudentCourseEnrollment, StudentProfile]
                 for model in student_manage_models:
-                    ct = ContentType.objects.get_for_model(model)
+                    ct = ContentType.objects.using(db_key).get_for_model(model)
                     student_group.permissions.add(
-                        Permission.objects.get(
+                        Permission.objects.using(db_key).get(
                             codename=f"view_{model._meta.model_name}", content_type=ct
                         ),
-                        Permission.objects.get(
+                        Permission.objects.using(db_key).get(
                             codename=f"add_{model._meta.model_name}", content_type=ct
                         ),
-                        Permission.objects.get(
+                        Permission.objects.using(db_key).get(
                             codename=f"change_{model._meta.model_name}", content_type=ct
                         ),
                     )
 
                 # Give Admins full permissions over everything
-                all_perms = Permission.objects.all()
+                all_perms = Permission.objects.using(db_key).all()
                 admin_group.permissions.set(all_perms)
 
                 self.stdout.write(
@@ -159,6 +160,11 @@ class Command(BaseCommand):
                     self.style.SUCCESS(
                         f"Roles Created and Permissions Assigned in {university.name}."
                     )
+                )
+
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f"Failed for {university.name}: {e}")
                 )
 
             finally:

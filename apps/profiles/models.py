@@ -11,7 +11,7 @@ class BaseProfile(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="profile",
+        related_name="base_profile",
     )
     profile_picture_public_id = models.CharField(
         _("profile picture public id"), max_length=255, null=True, blank=True
