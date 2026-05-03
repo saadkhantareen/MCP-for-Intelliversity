@@ -1,5 +1,4 @@
 from django.contrib.auth.models import Group, Permission, User
-from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
 from apps.academics.models import (
@@ -37,7 +36,6 @@ class Command(BaseCommand):
     Custom management command to seed three roles on all tenant databases.
 
     python manage.py seed_roles
-
     """
 
     help = "seed three roles on all tenant databases with permissions"
@@ -53,111 +51,86 @@ class Command(BaseCommand):
             )
             return
 
+        # 1. Grab the ManyToMany 'through' model directly to force routing
+        GroupPermission = Group.permissions.through
+
         for university in universities:
-            # define db_key outside so that, it cannot cause error at finally.
             db_key = None
 
             try:
                 db_key = ensure_tenant_db_configured(university)
-
                 self.stdout.write(f"Creating roles for {university.name}...")
 
-                # create groups
+                # Create groups
                 admin_group, _ = Group.objects.using(db_key).get_or_create(name="admin")
-                faculty_group, _ = Group.objects.using(db_key).get_or_create(
-                    name="faculty"
-                )
-                student_group, _ = Group.objects.using(db_key).get_or_create(
-                    name="student"
-                )
+                faculty_group, _ = Group.objects.using(db_key).get_or_create(name="faculty")
+                student_group, _ = Group.objects.using(db_key).get_or_create(name="student")
 
-                # Helper lists for common academic structure models (Read-Only for both Faculty and Students)
+                # Helper lists for common academic structure models
                 academic_structure_models = [
-                    Department,
-                    Program,
-                    Course,
-                    CoursePrerequisite,
-                    Curriculum,
-                    ProgramCurriculum,
-                    AcademicYear,
-                    Term,
-                    Batch,
-                    Section,
-                    Document,
+                    Department, Program, Course, CoursePrerequisite,
+                    Curriculum, ProgramCurriculum, AcademicYear, Term,
+                    Batch, Section, Document,
                 ]
 
-                # Faculty can view general academic structures and student profiles
+                # 2. Helper to fetch permissions cleanly (avoids ContentType cache contamination across DBs)
+                def get_permission(model_class, action):
+                    return Permission.objects.using(db_key).get(
+                        content_type__app_label=model_class._meta.app_label,
+                        content_type__model=model_class._meta.model_name,
+                        codename=f"{action}_{model_class._meta.model_name}"
+                    )
+
+                # 3. Helper to explicitly assign permissions strictly to the target DB
+                def assign_perms(group, models_list, actions):
+                    perms_to_add = []
+                    for model in models_list:
+                        for action in actions:
+                            perm = get_permission(model, action)
+                            # Create instances for the M2M through-model
+                            perms_to_add.append(
+                                GroupPermission(group_id=group.id, permission_id=perm.id)
+                            )
+                    
+                    # bulk_create with ignore_conflicts=True avoids errors if script is run multiple times
+                    if perms_to_add:
+                        GroupPermission.objects.using(db_key).bulk_create(
+                            perms_to_add, ignore_conflicts=True
+                        )
+
+                # --- Assign Faculty Permissions ---
                 faculty_view_models = academic_structure_models + [StudentProfile]
-                for model in faculty_view_models:
-                    ct = ContentType.objects.using(db_key).get_for_model(model)
-                    view_perm = Permission.objects.using(db_key).get(
-                        codename=f"view_{model._meta.model_name}", content_type=ct
-                    )
-                    faculty_group.permissions.add(view_perm)
+                assign_perms(faculty_group, faculty_view_models, ['view'])
 
-                # Faculty can manage (add/change/view) their courses, enrollments, and student grades
                 faculty_manage_models = [
-                    FacultyCourse,
-                    FacultyCourseEnrollment,
-                    StudentTermRecord,
-                    FacultyProfile,
+                    FacultyCourse, FacultyCourseEnrollment,
+                    StudentTermRecord, FacultyProfile,
                 ]
-                for model in faculty_manage_models:
-                    ct = ContentType.objects.using(db_key).get_for_model(model)
-                    faculty_group.permissions.add(
-                        Permission.objects.using(db_key).get(
-                            codename=f"view_{model._meta.model_name}", content_type=ct
-                        ),
-                        Permission.objects.using(db_key).get(
-                            codename=f"add_{model._meta.model_name}", content_type=ct
-                        ),
-                        Permission.objects.using(db_key).get(
-                            codename=f"change_{model._meta.model_name}", content_type=ct
-                        ),
-                    )
+                assign_perms(faculty_group, faculty_manage_models, ['view', 'add', 'change'])
 
-                # Students can view general academic structures and faculty profiles
+                # --- Assign Student Permissions ---
                 student_view_models = academic_structure_models + [
-                    FacultyProfile,
-                    StudentTermRecord,
-                    StudentFeeInvoice,
+                    FacultyProfile, StudentTermRecord, StudentFeeInvoice,
                 ]
-                for model in student_view_models:
-                    ct = ContentType.objects.using(db_key).get_for_model(model)
-                    view_perm = Permission.objects.using(db_key).get(
-                        codename=f"view_{model._meta.model_name}", content_type=ct
-                    )
-                    student_group.permissions.add(view_perm)
+                assign_perms(student_group, student_view_models, ['view'])
 
-                # Students can manage (add/change/view) their own enrollments and profiles
                 student_manage_models = [StudentCourseEnrollment, StudentProfile]
-                for model in student_manage_models:
-                    ct = ContentType.objects.using(db_key).get_for_model(model)
-                    student_group.permissions.add(
-                        Permission.objects.using(db_key).get(
-                            codename=f"view_{model._meta.model_name}", content_type=ct
-                        ),
-                        Permission.objects.using(db_key).get(
-                            codename=f"add_{model._meta.model_name}", content_type=ct
-                        ),
-                        Permission.objects.using(db_key).get(
-                            codename=f"change_{model._meta.model_name}", content_type=ct
-                        ),
-                    )
+                assign_perms(student_group, student_manage_models, ['view', 'add', 'change'])
 
-                # Give Admins full permissions over everything
+                # --- Assign Admin Permissions ---
                 all_perms = Permission.objects.using(db_key).all()
-                admin_group.permissions.set(all_perms)
-
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        "Successfully configured Groups and Permissions for all models!"
+                admin_perms_to_add = [
+                    GroupPermission(group_id=admin_group.id, permission_id=perm.id)
+                    for perm in all_perms
+                ]
+                if admin_perms_to_add:
+                    GroupPermission.objects.using(db_key).bulk_create(
+                        admin_perms_to_add, ignore_conflicts=True
                     )
-                )
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Roles Created and Permissions Assigned in {university.name}."
+                        f"Successfully Configured Roles and Assigned Permissions in {university.name}."
                     )
                 )
 

@@ -1,4 +1,3 @@
-# apps/storage/views.py
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -6,7 +5,6 @@ from rest_framework.views import APIView
 
 from apps.storage.serializers import (
     GlobalUploadSignatureSerializer,
-    PrivateAssetUrlSerializer,
     UploadSignatureSerializer,
 )
 
@@ -33,9 +31,10 @@ class GlobalUploadSignatureView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = GlobalUploadSignatureSerializer
 
     def get(self, request: Request, asset_category: str, **kwargs) -> Response:
-        serializer = GlobalUploadSignatureSerializer(
+        serializer = self.serializer_class(
             data=request.data,
             context={
                 "request": request,
@@ -59,36 +58,38 @@ class UploadSignatureView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
+    serializer_class = UploadSignatureSerializer
 
     def get(self, request: Request, asset_category: str) -> Response:
-        serializer = UploadSignatureSerializer(
+        serializer = self.serializer_class(
             data=request.data,
             context={"request": request, "asset_category": asset_category},
         )
         serializer.is_valid(raise_exception=True)
         return Response(serializer.get_upload_params())
 
-    # class PrivateAssetUrlView(APIView):
-    """
-    POST /uploads/private-url/
 
-    Body:
-        {
-            "public_id":     "universities/fast/admin/private/document/abc123",
-            "resource_type": "raw"
-        }
+# class PrivateAssetUrlView(APIView):
+#     """
+#     POST /uploads/private-url/
 
-    Response:
-        {
-            "url": "https://res.cloudinary.com/...?signature=...&expires_at=..."
-        }
+#     Body:
+#         {
+#             "public_id":     "universities/fast/admin/private/document/abc123",
+#             "resource_type": "raw"
+#         }
 
-    Returns a signed time-limited URL (1 hour) for viewing a private Cloudinary asset.
-    Only authenticated users can access this.
-    """
-    permission_classes = [IsAuthenticated]
+#     Response:
+#         {
+#             "url": "https://res.cloudinary.com/...?signature=...&expires_at=..."
+#         }
 
-    def post(self, request: Request) -> Response:
-        serializer = PrivateAssetUrlSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response({"url": serializer.get_signed_url()})
+#     Returns a signed time-limited URL (1 hour) for viewing a private Cloudinary asset.
+#     Only authenticated users can access this.
+#     """
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request: Request) -> Response:
+#         serializer = PrivateAssetUrlSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         return Response({"url": serializer.get_signed_url()})
