@@ -2,8 +2,8 @@ from django.urls import path
 
 from apps.storage.views import (
     GlobalUploadSignatureView,
+    PrivateAssetUrlView,
     UploadSignatureView,
-    PrivateAssetUrlView
 )
 
 urlpatterns = [
@@ -18,7 +18,7 @@ urlpatterns = [
         name="upload",
     ),
     path(
-        "uploads/private-url/",          
+        "uploads/private-url/",
         PrivateAssetUrlView.as_view(),
         name="private-asset-url",
     ),

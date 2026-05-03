@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock
+
 import pytest
 from django.http import JsonResponse
-from unittest.mock import MagicMock
 
 from apps.tenants.context import clear_current_tenant
 from apps.tenants.models import Portal, University

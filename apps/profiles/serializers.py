@@ -1,5 +1,6 @@
-from django.db import transaction
 from datetime import date
+
+from django.db import transaction
 from rest_framework import serializers
 
 from apps.accounts.serializers import RegisterSerializer

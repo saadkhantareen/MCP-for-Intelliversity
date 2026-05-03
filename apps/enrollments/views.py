@@ -1,17 +1,17 @@
-from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
+from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from apps.academics.models import ProgramCurriculum, Section, Term
-from apps.profiles.permissions import IsOwnerOrAdmin
 from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
 from apps.enrollments.serializers import (
     FacultyCourseEnrollmentSerializer,
     OfferedCourseSerializer,
     StudentCourseEnrollmentSerializer,
 )
+from apps.profiles.permissions import IsOwnerOrAdmin
 
 
 class GetCoursesForFacultyEnrollementView(APIView):

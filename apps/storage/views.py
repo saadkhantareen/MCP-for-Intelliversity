@@ -31,15 +31,16 @@ class GlobalUploadSignatureView(APIView):
     Returns signed Cloudinary params for global uploads (branding, page backgrounds).
     No auth required.
     """
+
     permission_classes = [AllowAny]
 
     def get(self, request: Request, asset_category: str, **kwargs) -> Response:
         serializer = GlobalUploadSignatureSerializer(
             data=request.data,
             context={
-                "request":        request,
+                "request": request,
                 "asset_category": asset_category,
-                "domain":         request.query_params.get("domain"),
+                "domain": request.query_params.get("domain"),
             },
         )
         serializer.is_valid(raise_exception=True)
@@ -56,6 +57,7 @@ class UploadSignatureView(APIView):
 
     Requires auth + middleware to set request.university and request.portal_name.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, asset_category: str) -> Response:
@@ -66,8 +68,7 @@ class UploadSignatureView(APIView):
         serializer.is_valid(raise_exception=True)
         return Response(serializer.get_upload_params())
 
-
-# class PrivateAssetUrlView(APIView):
+    # class PrivateAssetUrlView(APIView):
     """
     POST /uploads/private-url/
 

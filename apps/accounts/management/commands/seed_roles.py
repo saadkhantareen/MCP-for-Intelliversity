@@ -1,35 +1,34 @@
-from django.contrib.auth.models import User, Group, Permission
-from django.core.management.base import BaseCommand
+from django.contrib.auth.models import Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
-
-from apps.tenants.models import University
-from apps.tenants.utils.db_utils import (
-    close_tenant_db_connection,
-    ensure_tenant_db_configured,
-)
+from django.core.management.base import BaseCommand
 
 from apps.academics.models import (
-    Department,
-    Program,
+    AcademicYear,
+    Batch,
     Course,
     CoursePrerequisite,
     Curriculum,
-    ProgramCurriculum,
+    Department,
     FacultyCourse,
-    AcademicYear,
-    Term,
-    Batch,
+    Program,
+    ProgramCurriculum,
     Section,
     StudentTermRecord,
+    Term,
 )
 from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
 from apps.finance.models import StudentFeeInvoice
 from apps.profiles.models import (
-    BaseProfile,
-    StudentProfile,
-    FacultyProfile,
     AdminProfile,
+    BaseProfile,
     Document,
+    FacultyProfile,
+    StudentProfile,
+)
+from apps.tenants.models import University
+from apps.tenants.utils.db_utils import (
+    close_tenant_db_connection,
+    ensure_tenant_db_configured,
 )
 
 

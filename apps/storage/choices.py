@@ -4,7 +4,7 @@ from django.db import models
 class AssetCategory(models.TextChoices):
     PROFILE = "profile", "Profile"
     ASSIGNMENT = "assignment", "Assignment"
-    DOCUMENT   = "document",   "Document" 
+    DOCUMENT = "document", "Document"
 
 
 class GlobalAssetCategory(models.TextChoices):

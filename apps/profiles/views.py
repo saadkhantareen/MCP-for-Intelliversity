@@ -1,25 +1,25 @@
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from django.contrib.auth import get_user_model
-from apps.profiles.permissions import IsOwnerOrAdmin
 
 from apps.accounts.choices import Roles
 from apps.profiles.models import (
-    BaseProfile,
     AdminProfile,
+    BaseProfile,
     Document,
     FacultyProfile,
     StudentProfile,
 )
+from apps.profiles.permissions import IsOwnerOrAdmin
 from apps.profiles.serializers import (
+    AdminDocumentSerializer,
     AdminProfileSerializer,
     DocumentSerializer,
     FacultyProfileSerializer,
     StudentProfileSerializer,
-    AdminDocumentSerializer,
 )
 from apps.storage.utils import delete_cloudinary_asset
 

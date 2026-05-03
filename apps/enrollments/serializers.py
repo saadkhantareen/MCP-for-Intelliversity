@@ -62,4 +62,3 @@ class StudentCourseEnrollmentSerializer(serializers.ModelSerializer):
         validated_data["term"] = active_term
 
         return super().create(validated_data)
-

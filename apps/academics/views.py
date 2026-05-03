@@ -1,9 +1,8 @@
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions
+from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apps.profiles.permissions import IsOwnerOrAdmin
 from apps.academics.models import (
     AcademicYear,
     Batch,
@@ -23,6 +22,7 @@ from apps.academics.serializers import (
     FacultyCourseSerializer,
     ProgramSerializer,
 )
+from apps.profiles.permissions import IsOwnerOrAdmin
 
 
 class DepartmentViewSet(ModelViewSet):
