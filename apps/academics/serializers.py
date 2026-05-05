@@ -170,9 +170,11 @@ class CurriculumDetailSerializer(serializers.ModelSerializer):
 
 
 class CurriculumListSerializer(serializers.ModelSerializer):
+    program_name = serializers.CharField(source="program.name", read_only=True)
+
     class Meta:
         model = Curriculum
-        fields = ["id", "name", "program", "total_credit_hours"]
+        fields = ["id", "name", "program", "program_name", "total_credit_hours"]
 
 
 class TermSerializer(serializers.ModelSerializer):

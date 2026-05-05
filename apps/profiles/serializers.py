@@ -63,6 +63,19 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Date of birth must be in the past.")
         return value
 
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop("user", None)
+
+        if user_data:
+            user_serializer = RegisterSerializer(
+                instance.user, data=user_data, partial=True
+            )
+            user_serializer.is_valid(raise_exception=True)
+            user_serializer.save()
+
+        return super().update(instance, validated_data)
+
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
@@ -121,6 +134,7 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    department_name = serializers.CharField(source="department.name", read_only=True)
 
     class Meta:
         model = FacultyProfile
@@ -134,10 +148,12 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
             "office_number",
             "office_location",
             "department",
+            "department_name",
             "base_profile",
             "courses",
         ]
         read_only_fields = ["id"]
+        kwargs = {"department": {"write_only": True}}
 
     @transaction.atomic
     def create(self, validated_data):
