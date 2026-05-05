@@ -11,6 +11,7 @@ from apps.academics.models import (
     Department,
     FacultyCourse,
     Program,
+    Section,
 )
 from apps.academics.serializers import (
     AcademicYearSerializer,
@@ -21,6 +22,7 @@ from apps.academics.serializers import (
     DepartmentSerializer,
     FacultyCourseSerializer,
     ProgramSerializer,
+    SectionSerializer,
 )
 from apps.profiles.permissions import IsOwnerOrAdmin
 
@@ -125,3 +127,9 @@ class BatchViewSet(ModelViewSet):
 
         # 5. Failsafe
         return base_qs.none()
+
+
+class SectionViewSet(ModelViewSet):
+    queryset = Section.objects.select_related("batch")
+    serializer_class = SectionSerializer
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]

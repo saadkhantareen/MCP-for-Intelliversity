@@ -39,6 +39,21 @@ def get_user_role(user):
 class MyProfileView(APIView):
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
 
+    def get_queryset(self):
+        role = get_user_role(self.request.user)
+        if role == Roles.STUDENT:
+            return StudentProfile.objects.select_related(
+                "base_profile__user", "section"
+            ).filter(base_profile__user_id=self.request.user.id)
+        elif role == Roles.FACULTY:
+            return FacultyProfile.objects.select_related(
+                "base_profile__user", "department"
+            ).filter(base_profile__user_id=self.request.user.id)
+        elif role == Roles.ADMIN:
+            return AdminProfile.objects.select_related("base_profile__user").filter(
+                base_profile__user_id=self.request.user.id
+            )
+
     def get(self, request):
         role = get_user_role(request.user)
 
@@ -98,16 +113,18 @@ class DocumentView(APIView):
     """
 
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    queryset = Document.objects.select_related("base_profile__user")
+    serializer_class = DocumentSerializer
 
     def get(self, request):
         base_profile = BaseProfile.objects.get(user=request.user)
         documents = Document.objects.filter(base_profile=base_profile)
-        serializer = DocumentSerializer(documents, many=True)
+        serializer = self.serializer_class(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         base_profile = BaseProfile.objects.get(user=request.user)
-        serializer = DocumentSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(base_profile=base_profile)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -153,6 +170,7 @@ class AdminDocumentView(APIView):
 
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
     serializer_class = AdminDocumentSerializer
+    queryset = Document.objects.select_related("base_profile__user")
 
     def _is_admin(self, request):
         return request.portal_name == "admin"

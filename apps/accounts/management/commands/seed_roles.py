@@ -63,14 +63,26 @@ class Command(BaseCommand):
 
                 # Create groups
                 admin_group, _ = Group.objects.using(db_key).get_or_create(name="admin")
-                faculty_group, _ = Group.objects.using(db_key).get_or_create(name="faculty")
-                student_group, _ = Group.objects.using(db_key).get_or_create(name="student")
+                faculty_group, _ = Group.objects.using(db_key).get_or_create(
+                    name="faculty"
+                )
+                student_group, _ = Group.objects.using(db_key).get_or_create(
+                    name="student"
+                )
 
                 # Helper lists for common academic structure models
                 academic_structure_models = [
-                    Department, Program, Course, CoursePrerequisite,
-                    Curriculum, ProgramCurriculum, AcademicYear, Term,
-                    Batch, Section, Document,
+                    Department,
+                    Program,
+                    Course,
+                    CoursePrerequisite,
+                    Curriculum,
+                    ProgramCurriculum,
+                    AcademicYear,
+                    Term,
+                    Batch,
+                    Section,
+                    Document,
                 ]
 
                 # 2. Helper to fetch permissions cleanly (avoids ContentType cache contamination across DBs)
@@ -78,7 +90,7 @@ class Command(BaseCommand):
                     return Permission.objects.using(db_key).get(
                         content_type__app_label=model_class._meta.app_label,
                         content_type__model=model_class._meta.model_name,
-                        codename=f"{action}_{model_class._meta.model_name}"
+                        codename=f"{action}_{model_class._meta.model_name}",
                     )
 
                 # 3. Helper to explicitly assign permissions strictly to the target DB
@@ -89,9 +101,11 @@ class Command(BaseCommand):
                             perm = get_permission(model, action)
                             # Create instances for the M2M through-model
                             perms_to_add.append(
-                                GroupPermission(group_id=group.id, permission_id=perm.id)
+                                GroupPermission(
+                                    group_id=group.id, permission_id=perm.id
+                                )
                             )
-                    
+
                     # bulk_create with ignore_conflicts=True avoids errors if script is run multiple times
                     if perms_to_add:
                         GroupPermission.objects.using(db_key).bulk_create(
@@ -100,22 +114,36 @@ class Command(BaseCommand):
 
                 # --- Assign Faculty Permissions ---
                 faculty_view_models = academic_structure_models + [StudentProfile]
-                assign_perms(faculty_group, faculty_view_models, ['view'])
+                assign_perms(faculty_group, faculty_view_models, ["view"])
 
                 faculty_manage_models = [
-                    FacultyCourse, FacultyCourseEnrollment,
-                    StudentTermRecord, FacultyProfile,
+                    FacultyCourse,
+                    FacultyCourseEnrollment,
+                    StudentTermRecord,
+                    FacultyProfile,
+                    Document,
                 ]
-                assign_perms(faculty_group, faculty_manage_models, ['view', 'add', 'change'])
+                assign_perms(
+                    faculty_group,
+                    faculty_manage_models,
+                    ["view", "add", "change", "delete"],
+                )
 
                 # --- Assign Student Permissions ---
                 student_view_models = academic_structure_models + [
-                    FacultyProfile, StudentTermRecord, StudentFeeInvoice,
+                    FacultyProfile,
+                    StudentTermRecord,
+                    StudentFeeInvoice,
+                    Document,
                 ]
-                assign_perms(student_group, student_view_models, ['view'])
+                assign_perms(student_group, student_view_models, ["view"])
 
                 student_manage_models = [StudentCourseEnrollment, StudentProfile]
-                assign_perms(student_group, student_manage_models, ['view', 'add', 'change'])
+                assign_perms(
+                    student_group,
+                    student_manage_models,
+                    ["view", "add", "change", "delete"],
+                )
 
                 # --- Assign Admin Permissions ---
                 all_perms = Permission.objects.using(db_key).all()

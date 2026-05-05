@@ -15,7 +15,7 @@ from apps.profiles.permissions import IsOwnerOrAdmin
 
 
 class GetCoursesForFacultyEnrollementView(APIView):
-    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
     def get(self, request):
         section_id = request.query_params.get("section_id")
@@ -52,7 +52,7 @@ class FacultyCourseEnrollementViewSet(ModelViewSet):
 
 
 class GetCoursesForStudentEnrollmentView(APIView):
-    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
     def get(self, request):
         student_profile = request.user.base_profile.student_profile
@@ -69,6 +69,9 @@ class GetCoursesForStudentEnrollmentView(APIView):
 class StudentCourseEnrollmentListCreateAPIView(APIView):
     serializer_class = StudentCourseEnrollmentSerializer
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    queryset = StudentCourseEnrollment.objects.select_related(
+        "course", "term", "section"
+    )
 
     def get(self, request):
         student_profile = request.user.base_profile.student_profile
@@ -96,6 +99,9 @@ class StudentCourseEnrollmentListCreateAPIView(APIView):
 class StudentCourseEnrollmentDeleteAPIView(APIView):
     serializer_class = StudentCourseEnrollmentSerializer
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    queryset = StudentCourseEnrollment.objects.select_related(
+        "course", "term", "section"
+    )
 
     def delete(self, request, pk):
         student_profile = request.user.base_profile.student_profile

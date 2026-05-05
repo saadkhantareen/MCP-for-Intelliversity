@@ -160,7 +160,7 @@ class CurriculumDetailSerializer(serializers.ModelSerializer):
 
         if courses_data is not None:
             # Refresh courses: Delete existing and bulk create new ones
-            instance.curriculum_courses.all().delete()
+            instance.courses.all().delete()
             program_courses = [
                 ProgramCurriculum(curriculum=instance, **item) for item in courses_data
             ]

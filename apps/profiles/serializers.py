@@ -3,6 +3,7 @@ from datetime import date
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.academics.models import Course, FacultyCourse, Section
 from apps.accounts.serializers import RegisterSerializer
 from apps.profiles.models import (
     AdminProfile,
@@ -65,11 +66,16 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
+    # read_only section field to display current section info, enrollment endpoint will handle section assignment
+    section = serializers.CharField(source="section.name", read_only=True)
+    # student batch and program info can be derived from section, so no need to include them in the serializer
+    batch = serializers.CharField(source="section.batch.name", read_only=True)
+    program = serializers.CharField(source="section.batch.program.name", read_only=True)
 
     class Meta:
         model = StudentProfile
         fields = ["id", "registration_id", "section", "cgpa", "base_profile"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "cgpa"]
 
     @transaction.atomic
     def create(self, validated_data):
@@ -99,6 +105,13 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
 class FacultyProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
+    courses = serializers.SlugRelatedField(
+        many=True,
+        queryset=Course.objects.all(),
+        slug_field="code",
+        write_only=True,
+        required=False,
+    )
 
     class Meta:
         model = FacultyProfile
@@ -113,20 +126,28 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
             "office_location",
             "department",
             "base_profile",
+            "courses",
         ]
         read_only_fields = ["id"]
 
     @transaction.atomic
     def create(self, validated_data):
+        # courses = validated_data.pop("courses")
         base_profile_data = validated_data.pop("base_profile")
         user_data = base_profile_data.pop("user")
 
         user = RegisterSerializer().create(user_data)
 
         base_profile = BaseProfile.objects.create(user=user, **base_profile_data)
-        return FacultyProfile.objects.create(
+        faculty = FacultyProfile.objects.create(
             base_profile=base_profile, **validated_data
         )
+
+        # FacultyCourse.objects.bulk_create(
+        #     [FacultyCourse(faculty=faculty, course=course) for course in courses]
+        # )
+
+        return faculty
 
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -205,6 +226,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "is_verified", "url", "created_at", "updated_at"]
+        extra_kwargs = {"document_public_id": {"write_only": True}}
 
     def get_url(self, obj) -> str | None:
         return get_private_asset_url(
