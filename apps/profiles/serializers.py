@@ -67,14 +67,23 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 class StudentProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
     # read_only section field to display current section info, enrollment endpoint will handle section assignment
-    section = serializers.CharField(source="section.name", read_only=True)
+    section_name = serializers.CharField(source="section.name", read_only=True)
     # student batch and program info can be derived from section, so no need to include them in the serializer
     batch = serializers.CharField(source="section.batch.name", read_only=True)
     program = serializers.CharField(source="section.batch.program.name", read_only=True)
 
     class Meta:
         model = StudentProfile
-        fields = ["id", "registration_id", "section", "cgpa", "base_profile"]
+        fields = [
+            "id",
+            "registration_id",
+            "section",
+            "section_name",
+            "cgpa",
+            "base_profile",
+            "batch",
+            "program",
+        ]
         read_only_fields = ["id", "cgpa"]
 
     @transaction.atomic
