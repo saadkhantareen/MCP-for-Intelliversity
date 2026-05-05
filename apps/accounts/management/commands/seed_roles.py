@@ -134,11 +134,14 @@ class Command(BaseCommand):
                     FacultyProfile,
                     StudentTermRecord,
                     StudentFeeInvoice,
-                    Document,
                 ]
                 assign_perms(student_group, student_view_models, ["view"])
 
-                student_manage_models = [StudentCourseEnrollment, StudentProfile]
+                student_manage_models = [
+                    StudentCourseEnrollment,
+                    StudentProfile,
+                    Document,
+                ]
                 assign_perms(
                     student_group,
                     student_manage_models,
