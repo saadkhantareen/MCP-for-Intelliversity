@@ -3,7 +3,7 @@ from django.db import models
 from apps.core.models import BaseModel
 
 
-class FacultyCourseEnrollment(BaseModel):
+class FacultyCourseAssignment(BaseModel):
     faculty = models.ForeignKey(
         "profiles.FacultyProfile",
         on_delete=models.CASCADE,

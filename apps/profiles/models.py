@@ -68,9 +68,7 @@ class StudentProfile(BaseModel):
         on_delete=models.PROTECT,
         related_name="students",
     )
-    cgpa = models.DecimalField(
-        _("CGPA"), max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    cgpa = models.DecimalField(_("CGPA"), max_digits=4, decimal_places=2, default=0.00)
 
     class Meta:
         verbose_name = _("student profile")

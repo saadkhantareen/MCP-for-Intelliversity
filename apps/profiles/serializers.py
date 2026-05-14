@@ -79,11 +79,11 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
-    # read_only section field to display current section info, enrollment endpoint will handle section assignment
+
     section_name = serializers.CharField(source="section.name", read_only=True)
-    # student batch and program info can be derived from section, so no need to include them in the serializer
     batch = serializers.CharField(source="section.batch.name", read_only=True)
     program = serializers.CharField(source="section.batch.program.name", read_only=True)
+    current_semester = serializers.SerializerMethodField()
 
     class Meta:
         model = StudentProfile
@@ -96,6 +96,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "base_profile",
             "batch",
             "program",
+            "current_semester",
         ]
         read_only_fields = ["id", "cgpa"]
 
@@ -123,6 +124,10 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             base_profile_serializer.save()
 
         return super().update(instance, validated_data)
+
+    def get_current_semester(self, obj):
+        # Calculate current semester based on the number of StudentTermRecords
+        return obj.studenttermrecord_set.count() + 1
 
 
 class FacultyProfileSerializer(serializers.ModelSerializer):

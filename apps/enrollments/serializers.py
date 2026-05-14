@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.academics.models import Course, ProgramCurriculum, Section, Term
-from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
+from apps.enrollments.models import FacultyCourseAssignment, StudentCourseEnrollment
 from apps.profiles.models import FacultyProfile
 
 
@@ -22,7 +22,7 @@ class OfferedCourseSerializer(serializers.ModelSerializer):
         ]
 
 
-class FacultyCourseEnrollmentSerializer(serializers.ModelSerializer):
+class FacultyCourseAssignmentSerializer(serializers.ModelSerializer):
     faculty = serializers.SlugRelatedField(
         queryset=FacultyProfile.objects.all(),
         slug_field="registration_id",
@@ -39,7 +39,7 @@ class FacultyCourseEnrollmentSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = FacultyCourseEnrollment
+        model = FacultyCourseAssignment
         fields = ["id", "faculty", "course", "term", "section"]
 
 

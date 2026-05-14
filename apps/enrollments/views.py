@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from apps.academics.models import ProgramCurriculum, Section, Term
-from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
+from apps.enrollments.models import FacultyCourseAssignment, StudentCourseEnrollment
 from apps.enrollments.serializers import (
-    FacultyCourseEnrollmentSerializer,
+    FacultyCourseAssignmentSerializer,
     OfferedCourseSerializer,
     StudentCourseEnrollmentSerializer,
 )
@@ -40,14 +40,14 @@ class GetCoursesForFacultyEnrollementView(APIView):
         return Response(serializer.data)
 
 
-class FacultyCourseEnrollementViewSet(ModelViewSet):
-    queryset = FacultyCourseEnrollment.objects.select_related(
+class FacultyCourseAssignmentViewSet(ModelViewSet):
+    queryset = FacultyCourseAssignment.objects.select_related(
         "faculty",
         "course",
         "term",
         "section",
     )
-    serializer_class = FacultyCourseEnrollmentSerializer
+    serializer_class = FacultyCourseAssignmentSerializer
     permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
 
 
