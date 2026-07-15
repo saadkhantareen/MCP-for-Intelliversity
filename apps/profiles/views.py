@@ -1,39 +1,31 @@
+from django.contrib.auth import get_user_model
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from django.contrib.auth import get_user_model
 
 from apps.accounts.choices import Roles
 from apps.profiles.models import (
-    BaseProfile,
     AdminProfile,
+    BaseProfile,
     Document,
     FacultyProfile,
     StudentProfile,
 )
+from apps.profiles.permissions import IsOwnerOrAdmin
 from apps.profiles.serializers import (
+    AdminDocumentSerializer,
     AdminProfileSerializer,
     DocumentSerializer,
     FacultyProfileSerializer,
     StudentProfileSerializer,
-    AdminDocumentSerializer,
 )
 from apps.storage.utils import delete_cloudinary_asset
 
 User = get_user_model()
-
-
-def get_or_create_base_profile(user):
-    base_profile, _ = BaseProfile.objects.get_or_create(user=user)
-    return base_profile
-
-
-def get_or_create_role_profile(user, profile_model):
-    base_profile = get_or_create_base_profile(user)
-    profile, _ = profile_model.objects.get_or_create(base_profile=base_profile)
-    return profile
 
 
 def get_user_role(user):
@@ -45,7 +37,22 @@ def get_user_role(user):
 
 
 class MyProfileView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+
+    def get_queryset(self):
+        role = get_user_role(self.request.user)
+        if role == Roles.STUDENT:
+            return StudentProfile.objects.select_related(
+                "base_profile__user", "section"
+            ).filter(base_profile__user_id=self.request.user.id)
+        elif role == Roles.FACULTY:
+            return FacultyProfile.objects.select_related(
+                "base_profile__user", "department"
+            ).filter(base_profile__user_id=self.request.user.id)
+        elif role == Roles.ADMIN:
+            return AdminProfile.objects.select_related("base_profile__user").filter(
+                base_profile__user_id=self.request.user.id
+            )
 
     def get(self, request):
         role = get_user_role(request.user)
@@ -81,19 +88,19 @@ class MyProfileView(APIView):
 
 
 class StudentProfileViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
     serializer_class = StudentProfileSerializer
     queryset = StudentProfile.objects.select_related("base_profile__user", "section")
 
 
 class FacultyProfileViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
     serializer_class = FacultyProfileSerializer
     queryset = FacultyProfile.objects.select_related("base_profile__user", "department")
 
 
 class AdminProfileViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
     serializer_class = AdminProfileSerializer
     queryset = AdminProfile.objects.select_related("base_profile__user")
 
@@ -105,24 +112,38 @@ class DocumentView(APIView):
     DELETE /api/v1/profiles/documents/<doc_id>/ → delete own document
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    queryset = Document.objects.select_related("base_profile__user")
+    serializer_class = DocumentSerializer
 
     def get(self, request):
-        base_profile = get_or_create_base_profile(request.user)
+        base_profile = BaseProfile.objects.get(user=request.user)
         documents = Document.objects.filter(base_profile=base_profile)
-        serializer = DocumentSerializer(documents, many=True)
+        serializer = self.serializer_class(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        base_profile = get_or_create_base_profile(request.user)
-        serializer = DocumentSerializer(data=request.data)
+        base_profile = BaseProfile.objects.get(user=request.user)
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(base_profile=base_profile)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def delete(self, request, doc_id):
-        base_profile = get_or_create_base_profile(request.user)
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="doc_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Document ID to delete",
+                required=True,
+            )
+        ]
+    )
+    def delete(self, request):
+        base_profile = BaseProfile.objects.get(user=request.user)
         try:
+            doc_id = request.query_params.get("doc_id")
             document = Document.objects.get(id=doc_id, base_profile=base_profile)
         except Document.DoesNotExist:
             return Response(
@@ -131,7 +152,7 @@ class DocumentView(APIView):
 
         # delete from Cloudinary as well
         delete_cloudinary_asset(
-            document.public_id, resource_type=document.resource_type
+            document.document_public_id, resource_type=document.resource_type
         )
         document.delete()
         return Response(
@@ -146,6 +167,10 @@ class AdminDocumentView(APIView):
     GET  /api/v1/profiles/documents/admin/<user_id>/ → list user documents (with signed URLs)
     POST /api/v1/profiles/documents/admin/<user_id>/ → upload document for user
     """
+
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    serializer_class = AdminDocumentSerializer
+    queryset = Document.objects.select_related("base_profile__user")
 
     def _is_admin(self, request):
         return request.portal_name == "admin"
@@ -164,9 +189,9 @@ class AdminDocumentView(APIView):
                 {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        base_profile = get_or_create_base_profile(user)
+        base_profile = BaseProfile.objects.get(user=user)
         documents = Document.objects.filter(base_profile=base_profile)
-        serializer = AdminDocumentSerializer(documents, many=True)
+        serializer = self.serializer_class(documents, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, user_id):
@@ -183,8 +208,8 @@ class AdminDocumentView(APIView):
                 {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        base_profile = get_or_create_base_profile(user)
-        serializer = AdminDocumentSerializer(data=request.data)
+        base_profile = BaseProfile.objects.get(user=user)
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(base_profile=base_profile)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

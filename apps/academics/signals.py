@@ -5,9 +5,9 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from apps.academics.models import StudentTermRecord, Term
+from apps.academics.utils.generate_invoice import generate_secure_invoice_number
 from apps.finance.choices import PaidStatus
 from apps.finance.models import StudentFeeInvoice
-from apps.academics.utils.generate_invoice import generate_secure_invoice_number
 
 
 @receiver(pre_save, sender=Term)

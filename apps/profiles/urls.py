@@ -2,14 +2,14 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from apps.profiles.views import (
+    AdminDocumentView,
     AdminProfileViewSet,
+    DocumentView,
     FacultyProfileViewSet,
     MyProfileView,
     StudentProfileViewSet,
-    DocumentView,
-    AdminDocumentView,
 )
-from apps.profiles.views_bulk import BulkUploadView, BulkUploadTemplateView
+from apps.profiles.views_bulk import BulkUploadTemplateView, BulkUploadView
 
 router = DefaultRouter()
 # router.register(r"documents", DocumentViewSet, basename="document")
@@ -25,11 +25,8 @@ urlpatterns = [
         BulkUploadTemplateView.as_view(),
         name="bulk-upload-template",
     ),
-    # own profile
     path("me/", MyProfileView.as_view(), name="my-profile"),
-    # documents — own
     path("documents/", DocumentView.as_view(), name="documents"),
-    path("documents/<uuid:doc_id>/", DocumentView.as_view(), name="document-delete"),
     # documents — admin
     path(
         "documents/admin/<uuid:user_id>/",

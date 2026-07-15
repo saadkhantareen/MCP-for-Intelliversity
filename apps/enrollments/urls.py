@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from apps.enrollments.views import (
-    FacultyCourseEnrollementViewSet,
+    FacultyCourseAssignmentViewSet,
     GetCoursesForFacultyEnrollementView,
     GetCoursesForStudentEnrollmentView,
     StudentCourseEnrollmentDeleteAPIView,
@@ -11,7 +11,7 @@ from apps.enrollments.views import (
 
 router = DefaultRouter()
 router.register(
-    r"faculty/courses", FacultyCourseEnrollementViewSet, basename="faculty-enrollment"
+    r"faculty/courses", FacultyCourseAssignmentViewSet, basename="faculty-enrollment"
 )
 
 urlpatterns = [

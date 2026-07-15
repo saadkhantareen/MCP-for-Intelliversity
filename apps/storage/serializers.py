@@ -76,6 +76,9 @@ class UploadSignatureSerializer(serializers.Serializer):
         attrs["university_subdomain"] = request.university.subdomain
         attrs["portal_name"] = request.portal_name
         attrs["access"] = access
+        attrs["resource_type"] = (
+            "raw"  # All user-uploaded files are treated as 'raw' in Cloudinary
+        )
 
         return attrs
 

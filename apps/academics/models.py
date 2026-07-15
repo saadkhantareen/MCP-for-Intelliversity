@@ -118,7 +118,7 @@ class Curriculum(BaseModel):
 
 class ProgramCurriculum(BaseModel):
     curriculum = models.ForeignKey(
-        "Curriculum", on_delete=models.CASCADE, related_name="curriculum_courses"
+        "Curriculum", on_delete=models.CASCADE, related_name="courses"
     )
     course = models.ForeignKey("Course", on_delete=models.CASCADE)
     recommended_semester = models.PositiveIntegerField()
@@ -172,7 +172,9 @@ class Term(BaseModel):
     """
 
     name = models.CharField(max_length=20)
-    academic_year = models.ForeignKey("AcademicYear", on_delete=models.CASCADE)
+    academic_year = models.ForeignKey(
+        "AcademicYear", on_delete=models.CASCADE, related_name="terms"
+    )
     start_date = models.DateField()
     end_date = models.DateField()
     course_registration_start_date = models.DateField()
@@ -201,10 +203,9 @@ class Batch(BaseModel):
      With Program: M:1
      With Curriculum: M:1
      With Section: 1:M
-     With StudentProfile: 1:M
     """
 
-    name = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=55, unique=True)
     program = models.ForeignKey("Program", on_delete=models.CASCADE)
     curriculum = models.ForeignKey("Curriculum", on_delete=models.PROTECT)
     start_academic_year = models.ForeignKey(

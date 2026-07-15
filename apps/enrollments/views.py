@@ -1,20 +1,21 @@
-from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from apps.academics.models import ProgramCurriculum, Section, Term
-from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
+from apps.enrollments.models import FacultyCourseAssignment, StudentCourseEnrollment
 from apps.enrollments.serializers import (
-    FacultyCourseEnrollmentSerializer,
+    FacultyCourseAssignmentSerializer,
     OfferedCourseSerializer,
     StudentCourseEnrollmentSerializer,
 )
+from apps.profiles.permissions import IsOwnerOrAdmin
 
 
 class GetCoursesForFacultyEnrollementView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
     def get(self, request):
         section_id = request.query_params.get("section_id")
@@ -39,22 +40,22 @@ class GetCoursesForFacultyEnrollementView(APIView):
         return Response(serializer.data)
 
 
-class FacultyCourseEnrollementViewSet(ModelViewSet):
-    queryset = FacultyCourseEnrollment.objects.select_related(
+class FacultyCourseAssignmentViewSet(ModelViewSet):
+    queryset = FacultyCourseAssignment.objects.select_related(
         "faculty",
         "course",
         "term",
         "section",
     )
-    serializer_class = FacultyCourseEnrollmentSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = FacultyCourseAssignmentSerializer
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
 
 
 class GetCoursesForStudentEnrollmentView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
     def get(self, request):
-        student_profile = request.user.profile.student_profile
+        student_profile = request.user.base_profile.student_profile
 
         offered_courses = ProgramCurriculum.objects.filter(
             curriculum=student_profile.batch.curriculum,
@@ -67,10 +68,13 @@ class GetCoursesForStudentEnrollmentView(APIView):
 
 class StudentCourseEnrollmentListCreateAPIView(APIView):
     serializer_class = StudentCourseEnrollmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    queryset = StudentCourseEnrollment.objects.select_related(
+        "course", "term", "section"
+    )
 
     def get(self, request):
-        student_profile = request.user.profile.student_profile
+        student_profile = request.user.base_profile.student_profile
         active_term = Term.objects.filter(is_active=True).first()
 
         enrollments = StudentCourseEnrollment.objects.filter(
@@ -94,10 +98,13 @@ class StudentCourseEnrollmentListCreateAPIView(APIView):
 
 class StudentCourseEnrollmentDeleteAPIView(APIView):
     serializer_class = StudentCourseEnrollmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    queryset = StudentCourseEnrollment.objects.select_related(
+        "course", "term", "section"
+    )
 
     def delete(self, request, pk):
-        student_profile = request.user.profile.student_profile
+        student_profile = request.user.base_profile.student_profile
         active_term = Term.objects.filter(is_active=True).first()
 
         try:

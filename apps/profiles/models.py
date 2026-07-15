@@ -11,7 +11,7 @@ class BaseProfile(BaseModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="profile",
+        related_name="base_profile",
     )
     profile_picture_public_id = models.CharField(
         _("profile picture public id"), max_length=255, null=True, blank=True
@@ -68,9 +68,7 @@ class StudentProfile(BaseModel):
         on_delete=models.PROTECT,
         related_name="students",
     )
-    cgpa = models.DecimalField(
-        _("CGPA"), max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    cgpa = models.DecimalField(_("CGPA"), max_digits=4, decimal_places=2, default=0.00)
 
     class Meta:
         verbose_name = _("student profile")

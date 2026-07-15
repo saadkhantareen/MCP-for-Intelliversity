@@ -75,17 +75,14 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         # Validate recaptcha first
         recaptcha_token = attrs.pop("recaptcha_token", None)
-        
-        if not recaptcha_token:
-            raise serializers.ValidationError(
-                "reCAPTCHA token is required. Please complete the reCAPTCHA."
-            )
-        
+
         try:
             validate_recaptcha(recaptcha_token)
         except serializers.ValidationError as e:
             # Re-raise as non-field validation error
-            raise serializers.ValidationError(str(e.detail[0]) if e.detail else "reCAPTCHA verification failed.")
+            raise serializers.ValidationError(
+                str(e.detail[0]) if e.detail else "reCAPTCHA verification failed."
+            )
 
         request = self.context.get("request")
         user = authenticate(
