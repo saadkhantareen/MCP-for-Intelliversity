@@ -33,9 +33,16 @@ def validate_strong_password(value):
 
 
 def validate_recaptcha(token):
-    # Bypass recaptcha in development mode or if generic dummy secret is used
+    """
+    Validate reCAPTCHA token. Returns True if valid, raises ValidationError if invalid.
+    In debug mode with dummy secret, skips verification.
+    """
     if settings.DEBUG and settings.RECAPTCHA_SECRET_KEY == "dummy_secret_key":
-        return
+        return True
+    
+    if not token or not isinstance(token, str):
+        raise ValidationError("reCAPTCHA token is required.")
+    
     try:
         response = requests.post(
             "https://www.google.com/recaptcha/api/siteverify",
@@ -46,12 +53,16 @@ def validate_recaptcha(token):
             timeout=5,
         )
         result = response.json()
-    except requests.RequestException:
+        
+    except requests.RequestException as e:
         raise ValidationError("reCAPTCHA verification failed. Please try again.")
 
     if not result.get("success"):
-        raise ValidationError("reCAPTCHA verification failed.")
+        error_codes = result.get("error-codes", [])
+        raise ValidationError("reCAPTCHA verification failed. Invalid or expired token.")
 
     score = result.get("score", 0)
     if score < 0.5:
         raise ValidationError("Suspicious activity detected. Please try again.")
+    
+    return True

@@ -2,6 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock
 
 from apps.tenants.models import Portal, University
 
@@ -13,11 +14,12 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def mock_tenant_settings(settings):
     settings.ALLOWED_HOSTS = ["*"]
-    settings.ROOT_DOMAINS = ["localhost", "intelliversity.com"]
+    settings.ROOT_DOMAINS = ["localhost", "intelliversity.com", "127.0.0.1"]
     settings.FRONTEND_BASE_DOMAIN = "intelliversity.com"
     settings.FRONTEND_PORT = None
     settings.DEBUG = False
     settings.STATIC_ROOT = []
+    settings.RECAPTCHA_SECRET_KEY = "dummy_secret_key"
     return settings
 
 
@@ -59,11 +61,36 @@ def tenant_setup():
     return uni, portal
 
 
+# @pytest.fixture
+# def tenant_client(tenant_setup):
+#     client = APIClient()
+#     client.defaults["HTTP_HOST"] = "student.fast.intelliversity.com"
+#     return client
+
+
+# ... (Keep your other fixtures like mock_tenant_settings, bypass_tenant_db_routing, setup_roles, tenant_setup) ...
+
+
 @pytest.fixture
-def tenant_client(tenant_setup):
+def tenant_client(tenant_setup, monkeypatch):
+    uni, portal = tenant_setup
+
+    # Mock the database lookup for the middleware so it bypasses the DB query
+    fake_up = MagicMock()
+    fake_up.university = uni
+    fake_up.portal = portal
+
+    monkeypatch.setattr(
+        "apps.tenants.middleware.resolve_university_portal",
+        lambda host: (fake_up, None),
+    )
+
     client = APIClient()
-    client.defaults["HTTP_HOST"] = "student.fast.localhost"
+    client.defaults["HTTP_HOST"] = "student.fast.intelliversity.com"
     return client
+
+
+# ... (Keep sample_user fixture) ...
 
 
 @pytest.fixture

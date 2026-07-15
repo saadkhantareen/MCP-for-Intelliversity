@@ -1,8 +1,10 @@
+# apps/profiles/models.py
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from apps.core.models import BaseModel
+from apps.profiles.choices import DocumentType
 
 
 class BaseProfile(BaseModel):
@@ -11,13 +13,10 @@ class BaseProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    profile_picture = models.ImageField(
-        upload_to="profile_pictures/",
-        null=True,
-        blank=True,
+    profile_picture_public_id = models.CharField(
+        _("profile picture public id"), max_length=255, null=True, blank=True
     )
-
-    # ── Personal Info ────────────────────────────────────────
+    # Personal Info
     father_name = models.CharField(
         _("father name"), max_length=150, null=True, blank=True
     )
@@ -35,7 +34,7 @@ class BaseProfile(BaseModel):
     cnic = models.CharField(_("CNIC"), max_length=15, null=True, blank=True)
     religion = models.CharField(_("religion"), max_length=50, null=True, blank=True)
 
-    # ── Contact Info ─────────────────────────────────────────
+    # Contact Info
     phone_number = models.CharField(
         _("phone number"), max_length=20, null=True, blank=True
     )
@@ -46,7 +45,7 @@ class BaseProfile(BaseModel):
     city = models.CharField(_("city"), max_length=100, null=True, blank=True)
     country = models.CharField(_("country"), max_length=100, null=True, blank=True)
 
-    # ── Bio ──────────────────────────────────────────────────
+    # Bio
     bio = models.TextField(_("bio"), null=True, blank=True)
 
     class Meta:
@@ -63,15 +62,12 @@ class StudentProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="student_profile",
     )
-    enrollment_number = models.CharField(
-        _("enrollment number"), max_length=50, null=True, blank=True
+    registration_id = models.CharField(_("registration id"), max_length=50, unique=True)
+    section = models.ForeignKey(
+        "academics.Section",
+        on_delete=models.PROTECT,
+        related_name="students",
     )
-    department = models.CharField(
-        _("department"), max_length=150, null=True, blank=True
-    )
-    program = models.CharField(_("program"), max_length=150, null=True, blank=True)
-    semester = models.PositiveIntegerField(_("semester"), null=True, blank=True)
-    batch_year = models.PositiveIntegerField(_("batch year"), null=True, blank=True)
     cgpa = models.DecimalField(
         _("CGPA"), max_digits=4, decimal_places=2, null=True, blank=True
     )
@@ -90,6 +86,7 @@ class FacultyProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="faculty_profile",
     )
+    registration_id = models.CharField(_("registration id"), max_length=50, unique=True)
     designation = models.CharField(
         _("designation"), max_length=150, null=True, blank=True
     )
@@ -107,6 +104,13 @@ class FacultyProfile(BaseModel):
     )
     office_location = models.CharField(
         _("office location"), max_length=150, null=True, blank=True
+    )
+    department = models.ForeignKey(
+        "academics.Department",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="faculty_members",
     )
 
     class Meta:
@@ -141,31 +145,19 @@ class AdminProfile(BaseModel):
         return f"{self.base_profile.user.email} - Admin Profile"
 
 
-class DocumentType(models.TextChoices):
-    # Student documents
-    MATRIC_RESULT = "matric_result", _("Matric Result")
-    FSC_RESULT = "fsc_result", _("FSC Result")
-    BACHELOR_DEGREE = "bachelor_degree", _("Bachelor Degree")
-    TRANSCRIPT = "transcript", _("Transcript")
-    ADMISSION_LETTER = "admission_letter", _("Admission Letter")
-
-    # Faculty documents
-    PHD_DEGREE = "phd_degree", _("PhD Degree")
-    MASTER_DEGREE = "master_degree", _("Master Degree")
-    EXPERIENCE_LETTER = "experience_letter", _("Experience Letter")
-    RESEARCH_PAPER = "research_paper", _("Research Paper")
-    APPOINTMENT_LETTER = "appointment_letter", _("Appointment Letter")
-
-    # Common documents
-    CNIC = "cnic", _("CNIC")
-    PASSPORT = "passport", _("Passport")
-    OTHER = "other", _("Other")
-
-
 class Document(BaseModel):
     """
-    Documents linked to BaseProfile.
-    A user can have multiple documents.
+    Private documents linked to a user's BaseProfile.
+    Files are stored on Cloudinary as 'authenticated' type.
+
+    Upload flow:
+        1. GET  /api/v1/storage/uploads/signature/document/  → get signed Cloudinary params
+        2. POST file directly to Cloudinary                   → file uploaded privately
+        3. PATCH /api/v1/profiles/documents/                  → save public_id + resource_type here
+
+    View flow:
+        - Signed URL (1 hour valid) is auto-generated in every
+          document serializer response as the 'url' field.
     """
 
     base_profile = models.ForeignKey(
@@ -179,9 +171,18 @@ class Document(BaseModel):
         choices=DocumentType.choices,
     )
     title = models.CharField(_("title"), max_length=255)
-    file = models.FileField(upload_to="documents/")
+
+    resource_type = models.CharField(
+        _("resource type"), max_length=20, default="raw"
+    )  # raw / image / video
+
     description = models.TextField(_("description"), null=True, blank=True)
     is_verified = models.BooleanField(_("is verified"), default=False)
+
+    # Cloudinary public_id — saved after upload, used to generate signed URLs
+    document_public_id = models.CharField(
+        _("document public id"), max_length=255, null=True, blank=True
+    )
 
     class Meta:
         verbose_name = _("document")

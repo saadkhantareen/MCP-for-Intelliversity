@@ -1,7 +1,9 @@
+# apps/storage/serializers.py
 from rest_framework import serializers
 
 from apps.storage.constants import CATEGORY_ACCESS_MAP, GLOBAL_CATEGORY_ACCESS_MAP
 from apps.storage.services import CloudinaryService
+from apps.storage.utils import get_private_asset_url
 from apps.storage.validators import (
     validate_asset_category,
     validate_global_asset_category,
@@ -10,6 +12,7 @@ from apps.tenants.models import UniversityDomain
 
 
 class GlobalUploadSignatureSerializer(serializers.Serializer):
+    # No changes needed here — global uploads are always public (branding, page bg)
 
     def validate(self, attrs: dict) -> dict:
         asset_category = self.context["asset_category"]
@@ -54,6 +57,8 @@ class GlobalUploadSignatureSerializer(serializers.Serializer):
 
 
 class UploadSignatureSerializer(serializers.Serializer):
+    # Handles both public (profile pic) and private (documents) uploads
+    # Access type is auto-determined from CATEGORY_ACCESS_MAP
 
     def validate(self, attrs: dict) -> dict:
         asset_category = self.context["asset_category"]
@@ -85,3 +90,27 @@ class UploadSignatureSerializer(serializers.Serializer):
             university_subdomain=vd["university_subdomain"],
             is_global=False,
         )
+
+
+# class PrivateAssetUrlSerializer(serializers.Serializer):
+#     """
+#     Takes a Cloudinary public_id of a private asset and
+#     returns a signed time-limited URL valid for 1 hour.
+
+#     Used when a user wants to view their private documents.
+
+#     Request:  { "public_id": "universities/fast/admin/private/document/abc123", "resource_type": "raw" }
+#     Response: { "url": "https://res.cloudinary.com/...?signature=...&expires_at=..." }
+#     """
+
+#     public_id = serializers.CharField()
+#     resource_type = serializers.ChoiceField(
+#         choices=["image", "video", "raw"],
+#         default="raw",
+#     )
+
+#     def get_signed_url(self) -> str:
+#         return get_private_asset_url(
+#             public_id=self.validated_data["public_id"],
+#             resource_type=self.validated_data["resource_type"],
+#         )

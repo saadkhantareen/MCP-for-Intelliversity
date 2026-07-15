@@ -214,9 +214,13 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-# CORS
+# cors
 CORS_ALLOWED_ORIGIN_REGEXES = ENV.list(
-    "CORS_ALLOWED_ORIGIN_REGEXES", default=[r"https?://(.*\.)?localhost(:\d+)?$"]
+    "CORS_ALLOWED_ORIGIN_REGEXES",
+    default=[
+        r"https?://(.*\.)?localhost(:\d+)?$",
+        r"https?://.*\.intelliversity\.com(:\d+)?$",
+    ],
 )
 CORS_ALLOW_CREDENTIALS = ENV.bool("CORS_ALLOW_CREDENTIALS", default=False)
 
@@ -244,7 +248,7 @@ FRONTEND_PORT = ENV.int("FRONTEND_PORT", default="3000")
 PASSWORD_RESET_TIMEOUT = ENV.int("PASSWORD_RESET_TIMEOUT", default=900)
 
 # Recaptha config
-# RECAPTCHA_SECRET_KEY = ENV("RECAPTCHA_SECRET_KEY")
+RECAPTCHA_SECRET_KEY = ENV("RECAPTCHA_SECRET_KEY", default="dummy_secret_key")
 
 # cloudinary sdk for media storage
 cloudinary.config(
