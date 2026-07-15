@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, staging, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, staging, develop]
 
 jobs:
   lint:
@@ -81,7 +81,8 @@ jobs:
           DJANGO_SETTINGS_MODULE: intelliversity.settings
           DJANGO_SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: false
-          ALLOWED_HOSTS: localhost,127.0.0.1
+          ALLOWED_HOSTS: localhost,127.0.0.1,.localhost
+          SECURE_SSL_REDIRECT: false
           MAIN_POSTGRES_DB: test_db
           MAIN_POSTGRES_USER: postgres
           MAIN_POSTGRES_PASSWORD: postgres
@@ -89,5 +90,8 @@ jobs:
           MAIN_POSTGRES_PORT: 5432
           DB_CONN_MAX_AGE: 0
           DB_SSL_MODE: disable
+          CLOUDINARY_CLOUD_NAME: test-cloud
+          CLOUDINARY_API_KEY: test-api-key
+          CLOUDINARY_API_SECRET: test-api-secret
         # uv run executes pytest inside the isolated environment created by uv sync
         run: uv run pytest

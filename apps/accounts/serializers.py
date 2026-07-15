@@ -10,7 +10,11 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.choices import Roles
-from apps.accounts.validators import validate_strong_password, validate_university_email
+from apps.accounts.validators import (
+    validate_recaptcha,
+    validate_strong_password,
+    validate_university_email,
+)
 
 User = get_user_model()
 
@@ -66,8 +70,20 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(validators=[validate_university_email])
     password = serializers.CharField(write_only=True)
+    recaptcha_token = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
+        # Validate recaptcha first
+        recaptcha_token = attrs.pop("recaptcha_token", None)
+
+        try:
+            validate_recaptcha(recaptcha_token)
+        except serializers.ValidationError as e:
+            # Re-raise as non-field validation error
+            raise serializers.ValidationError(
+                str(e.detail[0]) if e.detail else "reCAPTCHA verification failed."
+            )
+
         request = self.context.get("request")
         user = authenticate(
             request=request,
@@ -80,12 +96,11 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError({"detail": "Account is disabled."})
 
         portal_role = request.portal_name
-
         user_roles = list(user.groups.values_list("name", flat=True))
 
         if not portal_role or portal_role not in user_roles:
             raise serializers.ValidationError(
-                {"detail": f"Invalid credentials {portal_role} portal."}
+                {"detail": f"Invalid credentials for {portal_role} portal."}
             )
 
         refresh = RefreshToken.for_user(user)

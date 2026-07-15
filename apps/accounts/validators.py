@@ -1,5 +1,7 @@
 import re
 
+import requests
+from django.conf import settings
 from rest_framework.serializers import ValidationError
 
 
@@ -28,3 +30,40 @@ def validate_strong_password(value):
 
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
         raise ValidationError("Password must contain at least one special character.")
+
+
+def validate_recaptcha(token):
+    """
+    Validate reCAPTCHA token. Returns True if valid, raises ValidationError if invalid.
+    In debug mode with dummy secret, skips verification.
+    """
+    if settings.DEBUG and settings.RECAPTCHA_SECRET_KEY == "dummy_secret_key":
+        return True
+
+    if not token or not isinstance(token, str):
+        raise ValidationError("reCAPTCHA token is required.")
+
+    try:
+        response = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={
+                "secret": settings.RECAPTCHA_SECRET_KEY,
+                "response": token,
+            },
+            timeout=5,
+        )
+        result = response.json()
+
+    except requests.RequestException:
+        raise ValidationError("reCAPTCHA verification failed. Please try again.")
+
+    if not result.get("success"):
+        raise ValidationError(
+            "reCAPTCHA verification failed. Invalid or expired token."
+        )
+
+    score = result.get("score", 0)
+    if score < 0.5:
+        raise ValidationError("Suspicious activity detected. Please try again.")
+
+    return True

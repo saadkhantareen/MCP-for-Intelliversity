@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 
+import cloudinary
 import environ
 
 ENV = environ.Env()
@@ -53,11 +54,20 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "corsheaders",
     "health_check",
+    "cloudinary",
 ]
 
 PROJECT_APPS = [
+    "apps.core",
     "apps.tenants",
+    "apps.storage",
     "apps.accounts",
+    "apps.profiles",
+    "apps.academics",
+    "apps.enrollments",
+    "apps.attendance",
+    "apps.examinations",
+    "apps.finance",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
@@ -204,9 +214,13 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-# CORS
+# cors
 CORS_ALLOWED_ORIGIN_REGEXES = ENV.list(
-    "CORS_ALLOWED_ORIGIN_REGEXES", default=[r"https?://(.*\.)?localhost(:\d+)?$"]
+    "CORS_ALLOWED_ORIGIN_REGEXES",
+    default=[
+        r"https?://(.*\.)?localhost(:\d+)?$",
+        r"https?://.*\.intelliversity\.com(:\d+)?$",
+    ],
 )
 CORS_ALLOW_CREDENTIALS = ENV.bool("CORS_ALLOW_CREDENTIALS", default=False)
 
@@ -225,10 +239,21 @@ EMAIL_BACKEND = ENV(
 )
 
 ROOT_DOMAINS = set(ENV.list("ROOT_DOMAINS", default=["localhost", "127.0.0.1"]))
-
+APPEND_SLASH = True
 # Frontend for forget-password
 FRONTEND_BASE_DOMAIN = ENV("FRONTEND_BASE_DOMAIN", default="localhost")
 FRONTEND_PORT = ENV.int("FRONTEND_PORT", default="3000")
 
 # forget password link expiration time
 PASSWORD_RESET_TIMEOUT = ENV.int("PASSWORD_RESET_TIMEOUT", default=900)
+
+# Recaptha config
+RECAPTCHA_SECRET_KEY = ENV("RECAPTCHA_SECRET_KEY", default="dummy_secret_key")
+
+# cloudinary sdk for media storage
+cloudinary.config(
+    cloud_name=ENV("CLOUDINARY_CLOUD_NAME"),
+    api_key=ENV("CLOUDINARY_API_KEY"),
+    api_secret=ENV("CLOUDINARY_API_SECRET"),
+    signature_algorithm=ENV("CLOUDINARY_SIGNATURE_ALGORITHM", default="sha256"),
+)
