@@ -90,5 +90,8 @@ jobs:
           MAIN_POSTGRES_PORT: 5432
           DB_CONN_MAX_AGE: 0
           DB_SSL_MODE: disable
+          CLOUDINARY_CLOUD_NAME: test-cloud
+          CLOUDINARY_API_KEY: test-api-key
+          CLOUDINARY_API_SECRET: test-api-secret
         # uv run executes pytest inside the isolated environment created by uv sync
         run: uv run pytest
