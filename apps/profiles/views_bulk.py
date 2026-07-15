@@ -16,6 +16,7 @@ from apps.profiles.serializers_bulk import BulkUploadSerializer
 class BulkUploadView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    serializer_class = BulkUploadSerializer
 
     @extend_schema(request=BulkUploadSerializer, responses={200: dict})
     def post(self, request):
@@ -26,7 +27,7 @@ class BulkUploadView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = BulkUploadSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         uploaded_file = serializer.validated_data["file"]
 
@@ -68,6 +69,7 @@ class BulkUploadView(APIView):
 
 class BulkUploadTemplateView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = BulkUploadSerializer
 
     def get(self, request):
         response = HttpResponse(content_type="text/csv")

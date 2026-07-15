@@ -42,7 +42,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
 
         extra_kwargs = {"profile_picture_public_id": {"write_only": True}}
 
-    def get_profile_picture_url(self, obj):
+    def get_profile_picture_url(self, obj) -> str | None:
         return (
             get_public_asset_url(obj.profile_picture_public_id)
             if obj.profile_picture_public_id
@@ -125,7 +125,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def get_current_semester(self, obj):
+    def get_current_semester(self, obj)-> int:
         # Calculate current semester based on the number of StudentTermRecords
         return obj.studenttermrecord_set.count() + 1
 
