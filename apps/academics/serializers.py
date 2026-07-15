@@ -16,11 +16,11 @@ from apps.academics.models import (
 from apps.academics.utils.utils import set_prerequisites
 from apps.academics.validators import (
     validate_curriculum_courses,
+    validate_only_one_active_term,
     validate_prerequisites,
+    validate_sections_seats,
     validate_start_lte_end,
     validate_term_dates_within_academic_year,
-    validate_only_one_active_term,
-    validate_sections_seats,
 )
 from apps.profiles.models import FacultyProfile
 

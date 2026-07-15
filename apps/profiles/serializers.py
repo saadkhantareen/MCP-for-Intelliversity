@@ -125,7 +125,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def get_current_semester(self, obj)-> int:
+    def get_current_semester(self, obj) -> int:
         # Calculate current semester based on the number of StudentTermRecords
         return obj.studenttermrecord_set.count() + 1
 
