@@ -63,6 +63,11 @@ class StudentProfile(BaseModel):
         related_name="student_profile",
     )
     registration_id = models.CharField(_("registration id"), max_length=50, unique=True)
+    batch = models.ForeignKey(
+        "academics.Batch",
+        on_delete=models.PROTECT,
+        related_name="students",
+    )
     section = models.ForeignKey(
         "academics.Section",
         on_delete=models.PROTECT,

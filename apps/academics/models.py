@@ -1,14 +1,40 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-
+from django.core.exceptions import ValidationError
 from apps.academics.choices import (
     AcademicStanding,
     CourseType,
     DegreeLevel,
     StudentTermStatus,
     TermType,
+    BatchStatus,
 )
 from apps.core.models import BaseModel
+
+# TODO: use this to make some features dynamic.
+# class AcademicPolicy(BaseModel):
+#     """
+#     Singleton model to store academic Policy for the university. This model is designed to have only one instance, which can be accessed and modified as needed.
+#     This is initialized on the University(tenant) setup.
+#     """
+
+#     # max_credit_hours = models.PositiveIntegerField(default=18)
+#     # min_credit_hours = models.PositiveIntegerField(default=12)
+#     # attendance_percentage_required = models.PositiveSmallIntegerField(default=75)
+#     # allow_student_self_registration = models.BooleanField(default=True)
+#     # auto_assign_sections = models.BooleanField(default=True)
+
+#     class Meta:
+#         verbose_name = "Academic Policy"
+
+#     def save(self, *args, **kwargs):
+#         if not self.pk and AcademicPolicy.objects.exists():
+#             raise ValidationError("Only one AcademicPolicy instance is allowed.")
+#         return super().save(*args, **kwargs)
+
+#     @classmethod
+#     def load(cls):
+#         return cls.objects.get()
 
 
 class Department(BaseModel):
@@ -59,7 +85,10 @@ class Program(BaseModel):
     degree_level = models.CharField(max_length=3, choices=DegreeLevel.choices)
     total_fee = models.DecimalField(max_digits=10, decimal_places=2)
     total_credit_hours_required = models.PositiveIntegerField()
-    number_of_semesters = models.PositiveIntegerField(MinValueValidator(1))
+    number_of_semesters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    annual_intake_capacity = models.PositiveIntegerField(
+        help_text="Maximum number of students that can be admitted annually Allowed by HEC."
+    )
 
     class Meta:
         verbose_name = "Program"
@@ -108,6 +137,8 @@ class CoursePrerequisite(BaseModel):
         )
 
 
+# TODO: add curriculum versioning and effective dates to handle curriculum changes over time.
+# TODO: think of strategy to add course offerings for each term and assign faculty to those offerings. This will help in tracking which courses are offered in which term and by which faculty member.
 class Curriculum(BaseModel):
     name = models.CharField(max_length=100)
     program = models.ForeignKey("Program", on_delete=models.CASCADE)
@@ -116,7 +147,7 @@ class Curriculum(BaseModel):
     # effective_from = models.DateField()
 
 
-class ProgramCurriculum(BaseModel):
+class CurriculumCourse(BaseModel):
     curriculum = models.ForeignKey(
         "Curriculum", on_delete=models.CASCADE, related_name="courses"
     )
@@ -138,10 +169,10 @@ class FacultyCourse(BaseModel):
     faculty = models.ForeignKey(
         "profiles.FacultyProfile",
         on_delete=models.CASCADE,
-        related_name="faculty_courses",
+        related_name="teach_courses",
     )
     course = models.ForeignKey(
-        "Course", on_delete=models.CASCADE, related_name="assigned_faculty"
+        "Course", on_delete=models.CASCADE, related_name="available_faculty"
     )
 
     class Meta:
@@ -171,18 +202,27 @@ class Term(BaseModel):
       within an academic year.
     """
 
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=50)
     academic_year = models.ForeignKey(
         "AcademicYear", on_delete=models.CASCADE, related_name="terms"
     )
     start_date = models.DateField()
     end_date = models.DateField()
+
+    term_type = models.CharField(max_length=10, choices=TermType.choices)
+    is_active = models.BooleanField(default=False)
+
+    # Dates for operations throughout the term
+    fee_issue_date = models.DateField()
+    fee_deadline = models.DateField()
+
+    faculty_course_assignment_start_date = models.DateField()
+    faculty_course_assignment_end_date = models.DateField()
+
     course_registration_start_date = models.DateField()
     course_registration_end_date = models.DateField()
     course_drop_deadline = models.DateField()
-    fee_deadline = models.DateField()
-    term_type = models.CharField(max_length=10, choices=TermType.choices)
-    is_active = models.BooleanField(default=False)
+    course_withdraw_deadline = models.DateField()
 
     class Meta:
         constraints = [
@@ -202,31 +242,51 @@ class Batch(BaseModel):
      Relationship:
      With Program: M:1
      With Curriculum: M:1
-     With Section: 1:M
+     With Term: M:1
     """
 
     name = models.CharField(max_length=55, unique=True)
     program = models.ForeignKey("Program", on_delete=models.CASCADE)
     curriculum = models.ForeignKey("Curriculum", on_delete=models.PROTECT)
-    start_academic_year = models.ForeignKey(
-        "AcademicYear",
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="batches_starting",
+    admission_term = models.ForeignKey(
+        "Term",
+        on_delete=models.PROTECT,
+        related_name="admitted_batches",
     )
-    start_date = models.DateField()
-    end_date = models.DateField()
-    is_active = models.BooleanField(default=True)
-    max_students = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=20,
+        choices=BatchStatus.choices,
+        default=BatchStatus.ACTIVE,
+    )
+    max_students = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    expected_current_semester = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)], default=1,
+        help_text="Current semester number for the batch. Help admin and system to get the current semester of the batch. This will be used to determine which courses are offered to the students of this batch.",
+    )
+    max_students_per_section = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Maximum number of students allowed in a section for this batch. This will be used to determine how many sections are created for the batch.",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["program", "admission_term"],
+                name="unique_batch_per_program_term",
+            )
+        ]
 
 
 class Section(BaseModel):
+    """
+    Based on the AcademicPolicy, sections can be either permanent or temporary. Permanent sections are fixed for the entire duration of the batch, while temporary sections can change based on course offerings each term.
+    """
+
     name = models.CharField(max_length=10)
     batch = models.ForeignKey(
         "Batch", on_delete=models.CASCADE, related_name="sections"
     )
-    total_seats = models.PositiveIntegerField()
-    # Additional fields like assigned faculty, schedule, etc. can be added here
+    total_seats = models.PositiveIntegerField(help_text="Maximum number of students that can be registered for courses in this section.")
 
 
 class StudentTermRecord(BaseModel):

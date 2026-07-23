@@ -1,10 +1,14 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework import status
 
+from apps.academics.filters import RoleBasedBatchFilter
 from apps.academics.models import (
     AcademicYear,
+    Term,
     Batch,
     Course,
     Curriculum,
@@ -14,7 +18,10 @@ from apps.academics.models import (
     Section,
 )
 from apps.academics.serializers import (
+    AcademicYearActivateSerializer,
     AcademicYearSerializer,
+    TermActivateSerializer,
+    TermSerializer,
     BatchSerializer,
     CourseSerializer,
     CurriculumDetailSerializer,
@@ -23,8 +30,8 @@ from apps.academics.serializers import (
     FacultyCourseSerializer,
     ProgramSerializer,
     SectionSerializer,
+    BatchAutoSectionSerializer,
 )
-from apps.profiles.permissions import IsOwnerOrAdmin
 
 
 class DepartmentViewSet(ModelViewSet):
@@ -82,54 +89,66 @@ class CurriculumViewSet(ModelViewSet):
 
 
 class AcademicYearViewSet(ModelViewSet):
-    queryset = AcademicYear.objects.prefetch_related("terms")
+    queryset = AcademicYear.objects.all()
     serializer_class = AcademicYearSerializer
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
+
+    # detail=True means this action applies to a single instance (requires an ID in the URL)
+    @extend_schema(request=None, responses={200: AcademicYearSerializer})
+    @action(
+        detail=True, methods=["post"], serializer_class=AcademicYearActivateSerializer
+    )
+    def activate(self, request, pk=None):
+        # Fetch the specific academic year using the ID from the URL
+        academic_year = self.get_object()
+        # Initialize the action serializer with the instance and empty data
+        # data={} is required to trigger the validation cycle
+        serializer = self.get_serializer(academic_year, data={})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        response_serializer = AcademicYearSerializer(academic_year)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class TermViewSet(ModelViewSet):
+    queryset = Term.objects.all()
+    serializer_class = TermSerializer
+    permission_classes = [DjangoModelPermissions]
+
+    @action(detail=True, methods=["post"], serializer_class=TermActivateSerializer)
+    def activate(self, request, pk=None):
+        term = self.get_object()
+        serializer = self.get_serializer(term, data={})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        response_serializer = TermSerializer(term)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 class BatchViewSet(ModelViewSet):
     serializer_class = BatchSerializer
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    filter_backends = [RoleBasedBatchFilter]
 
     def get_queryset(self):
-        user = self.request.user
+        return Batch.objects.select_related("program", "curriculum").prefetch_related(
+            "sections"
+        )
 
-        base_qs = Batch.objects.select_related(
-            "program", "curriculum"
-        ).prefetch_related("sections")
+    @action(detail=True, methods=["post"], serializer_class=BatchAutoSectionSerializer)
+    def auto_generate_sections(self, request, pk=None):
+        batch = self.get_object()
 
-        # Admin Logic: See all batches
-        if user.groups.filter(name="admin").exists():
-            return base_qs
+        serializer = BatchAutoSectionSerializer(data=request.data, context={"batch": batch})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        # Student Logic: See only the batch for their assigned section
-        if user.groups.filter(name="student").exists():
-            try:
-                # Based on related_name="student_profile" in your OneToOneField
-                student_profile = user.base_profile.student_profile
-                return base_qs.filter(sections__students=student_profile).distinct()
-
-            except AttributeError:
-                return base_qs.none()
-
-        # Faculty Logic: See batches containing sections they teach
-        if user.groups.filter(name="faculty").exists():
-            try:
-                # Assuming the related_name on BaseProfile is "faculty_profile"
-                faculty_profile = user.base_profile.faculty_profile
-
-                # Tracing the path: Batch -> sections -> course_assignments (FacultyCourseEnrollment) -> faculty
-                return base_qs.filter(
-                    sections__course_assignments__faculty=faculty_profile
-                ).distinct()
-            except AttributeError:
-                return base_qs.none()
-
-        # 5. Failsafe
-        return base_qs.none()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SectionViewSet(ModelViewSet):
     queryset = Section.objects.select_related("batch")
     serializer_class = SectionSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions, IsOwnerOrAdmin]
+    permission_classes = [IsAuthenticated, DjangoModelPermissions]

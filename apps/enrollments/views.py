@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.academics.models import ProgramCurriculum, Section, Term
+from apps.academics.models import CurriculumCourse, Section, Term
 from apps.enrollments.models import FacultyCourseAssignment, StudentCourseEnrollment
 from apps.enrollments.serializers import (
     FacultyCourseAssignmentSerializer,
@@ -30,7 +30,7 @@ class GetCoursesForFacultyEnrollementView(APIView):
         section = Section.objects.select_related("batch__curriculum").get(id=section_id)
         curriculum_id = section.batch.curriculum.id
 
-        offered_courses = ProgramCurriculum.objects.filter(
+        offered_courses = CurriculumCourse.objects.filter(
             curriculum_id=curriculum_id,
             recommended_semester=semester_number,
         ).select_related("course")
@@ -57,7 +57,7 @@ class GetCoursesForStudentEnrollmentView(APIView):
     def get(self, request):
         student_profile = request.user.base_profile.student_profile
 
-        offered_courses = ProgramCurriculum.objects.filter(
+        offered_courses = CurriculumCourse.objects.filter(
             curriculum=student_profile.batch.curriculum,
             recommended_semester=student_profile.current_semester,
         ).select_related("course")

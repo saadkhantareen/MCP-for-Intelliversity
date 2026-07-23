@@ -28,6 +28,23 @@ class FacultyCourseAssignment(BaseModel):
         ]
 
 
+class CourseOffering(BaseModel):
+    course = models.ForeignKey(
+        "academics.Course", on_delete=models.CASCADE, related_name="course_offerings"
+    )
+    term = models.ForeignKey(
+        "academics.Term", on_delete=models.CASCADE, related_name="course_offerings"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course", "term"],
+                name="unique_course_term_offering",
+            )
+        ]
+
+
 class StudentCourseEnrollment(BaseModel):
     student = models.ForeignKey(
         "profiles.StudentProfile",

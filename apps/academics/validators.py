@@ -1,6 +1,6 @@
 from rest_framework import serializers
-
-from apps.academics.models import Term
+from django.db.models import Sum
+from apps.academics.models import AcademicYear, Term, Batch
 
 
 def validate_prerequisites(self, attrs):
@@ -54,62 +54,78 @@ def validate_start_lte_end(attrs):
     return attrs
 
 
-def validate_term_dates_within_academic_year(attrs):
-    start_date = attrs.get("start_date")
-    end_date = attrs.get("end_date")
-    terms = attrs.get("terms", [])
-
-    for term in terms:
-        term_start = term.get("start_date")
-        term_end = term.get("end_date")
-
-        if term_start < start_date or term_end > end_date:
-            raise serializers.ValidationError(
-                {
-                    "terms": "Term dates must be within the academic year's start and end dates."
-                }
-            )
-    return attrs
-
-
-def validate_only_one_active_term(attrs, instance=None):
-    terms_data = attrs.get("terms", [])
-    active_terms_in_payload = [t for t in terms_data if t.get("is_active")]
-
-    if len(active_terms_in_payload) > 1:
+def validate_already_active(self, attrs):
+    instance = self.instance
+    if instance and instance.is_active:
         raise serializers.ValidationError(
-            {"terms": "Only one term can be active at a time."}
+            {"is_active": "This academic year is already active."}
         )
 
-    if any(t.get("is_active") for t in terms_data):
-        if Term.objects.filter(is_active=True).exists():
-            if not instance:
-                raise serializers.ValidationError(
-                    {"terms": "An active term already exists in the system."}
+
+def validate_no_previous_active_year(self, attrs):
+    if AcademicYear.objects.filter(is_active=True).exists():
+        raise serializers.ValidationError(
+            "Only one academic year can be active at a time. Make sure to deactivate the currently active academic year before activating a new one."
+        )
+
+def validate_no_previous_active_term(self, attrs):
+    if Term.objects.filter(is_active=True).exists():
+        raise serializers.ValidationError(
+            "Only one term can be active at a time. Make sure to deactivate the currently active term before activating a new one."
+        )
+
+
+def validate_program_curriculum_same(attrs, instance=None):
+    program = attrs.get("program", getattr(instance, "program", None))
+    curriculum = attrs.get("curriculum", getattr(instance, "curriculum", None))
+
+    if program and curriculum:
+        if curriculum.program_id != program.id:
+            raise serializers.ValidationError({
+                "curriculum": f"The curriculum '{curriculum.name}' does not belong to the program '{program.code}'."
+            })
+
+
+def validate_max_students_available_capacity(attrs, instance=None):
+    program = attrs.get("program", getattr(instance, "program", None))
+    admission_term = attrs.get("admission_term", getattr(instance, "admission_term", None))
+    max_students = attrs.get("max_students", getattr(instance, "max_students", None))
+
+    if program and admission_term and max_students is not None:
+        academic_year = admission_term.academic_year
+
+        existing_batches = Batch.objects.filter(
+            program=program,
+            admission_term__academic_year=academic_year
+        )
+
+        # If we are updating an existing batch, exclude it from the sum 
+        if instance and instance.pk:
+            existing_batches = existing_batches.exclude(pk=instance.pk)
+
+        # Calculate the sum of max_students. Use 'or 0' in case there are no existing batches yet (Sum returns None)
+        allocated_capacity = existing_batches.aggregate(
+            total=Sum("max_students")
+        )["total"] or 0
+
+        remaining_capacity = program.annual_intake_capacity - allocated_capacity
+
+        if max_students > remaining_capacity:
+            raise serializers.ValidationError({
+                "max_students": (
+                    f"Cannot allocate {max_students} students. The program '{program.code}' "
+                    f"has an annual capacity of {program.annual_intake_capacity}. "
+                    f"With other batches this year, only {remaining_capacity} seats remain."
                 )
+            })
 
-    return attrs
 
+def validate_max_students_per_section(attrs, instance=None):
+    max_students = attrs.get("max_students", getattr(instance, "max_students", None))
+    max_students_per_section = attrs.get("max_students_per_section", getattr(instance, "max_students_per_section", None))
 
-def validate_sections_seats(attrs, instance=None):
-    sections_data = attrs.get("sections", [])
-    max_students = attrs.get("max_students")
-
-    # If max_students isn't in the request (e.g., a PATCH request),
-    # get it from the existing instance if it exists.
-    if max_students is None and instance:
-        max_students = instance.max_students
-
-    total_section_seats = sum(
-        section.get("total_seats", 0) for section in sections_data
-    )
-
-    if max_students is not None and total_section_seats > max_students:
-        raise serializers.ValidationError(
-            {
-                "sections": f"The total seats in sections ({total_section_seats}) "
-                f"cannot exceed the batch's maximum students capacity ({max_students})."
-            }
-        )
-
-    return attrs
+    if max_students is not None and max_students_per_section is not None:
+        if max_students_per_section > max_students:
+            raise serializers.ValidationError({
+                "max_students_per_section": f"The maximum number of students per section ({max_students_per_section}) cannot exceed the total maximum number of students ({max_students})."
+            })

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.academics.models import Course, ProgramCurriculum, Section, Term
+from apps.academics.models import Course, CurriculumCourse, Section, Term
 from apps.enrollments.models import FacultyCourseAssignment, StudentCourseEnrollment
 from apps.profiles.models import FacultyProfile
 
@@ -12,7 +12,7 @@ class OfferedCourseSerializer(serializers.ModelSerializer):
     credit_hours = serializers.IntegerField(source="course.credit_hours")
 
     class Meta:
-        model = ProgramCurriculum
+        model = CurriculumCourse
         fields = [
             "course_id",
             "course_code",
