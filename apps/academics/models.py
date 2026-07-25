@@ -233,7 +233,7 @@ class Term(BaseModel):
             )
         ]
 
-
+# Operational data
 class Batch(BaseModel):
     """
     Batch represents a cohort of students admitted in a specific academic year

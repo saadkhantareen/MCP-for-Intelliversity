@@ -137,11 +137,18 @@ class BatchViewSet(ModelViewSet):
             "sections"
         )
 
-    @action(detail=True, methods=["post"], serializer_class=BatchAutoSectionSerializer)
+    @action(
+        detail=True,
+        methods=["post"],
+        serializer_class=BatchAutoSectionSerializer,
+        url_path="auto-generate-sections",
+    )
     def auto_generate_sections(self, request, pk=None):
         batch = self.get_object()
 
-        serializer = BatchAutoSectionSerializer(data=request.data, context={"batch": batch})
+        serializer = BatchAutoSectionSerializer(
+            data=request.data, context={"batch": batch}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 

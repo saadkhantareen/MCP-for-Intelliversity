@@ -104,14 +104,13 @@ class LoginSerializer(serializers.Serializer):
             )
 
         refresh = RefreshToken.for_user(user)
-        roles = list(user.groups.values_list("name", flat=True))
 
         return {
             "user": {
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "roles": roles,
+                "roles": user_roles,
             },
             "tokens": {
                 "refresh": str(refresh),

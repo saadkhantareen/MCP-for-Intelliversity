@@ -1,7 +1,7 @@
 from django.db import models
 
 from apps.core.models import BaseModel
-from apps.enrollments.choices import AssignmentStatus
+from apps.enrollments.choices import AssignmentStatus, EnrollmentStatus
 
 
 class CourseOffering(BaseModel):
@@ -31,17 +31,20 @@ class CourseOffering(BaseModel):
 
 class FacultyAssignment(BaseModel):
     course_offering = models.ForeignKey(
-        CourseOffering, on_delete=models.CASCADE, related_name="faculty_sections"
+        "CourseOffering", on_delete=models.CASCADE, related_name="faculty_assignments"
     )
     faculty = models.ForeignKey(
-        "academics.Faculty", on_delete=models.CASCADE, related_name="faculty_sections"
+        "profiles.FacultyProfile",
+        on_delete=models.CASCADE,
+        related_name="assignments",
+        null=True,
+        blank=True,
     )
     status = models.CharField(
         max_length=20,
         choices=AssignmentStatus.choices,
         default=AssignmentStatus.PENDING,
     )
-    
 
     class Meta:
         constraints = [
@@ -52,15 +55,20 @@ class FacultyAssignment(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.course_offering} - {self.faculty} - {self.section}"
+        return f"{self.course_offering} - {self.faculty}"
 
 
 class Enrollment(BaseModel):
     course_offering = models.ForeignKey(
-        CourseOffering, on_delete=models.CASCADE, related_name="enrollments"
+        "CourseOffering", on_delete=models.CASCADE, related_name="enrollments"
     )
     student = models.ForeignKey(
-        "academics.Student", on_delete=models.CASCADE, related_name="enrollments"
+        "profiles.StudentProfile", on_delete=models.CASCADE, related_name="enrollments"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=EnrollmentStatus.choices,
+        default=EnrollmentStatus.PENDING,
     )
 
     class Meta:
