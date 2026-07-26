@@ -215,3 +215,49 @@ class StudentAssessment(BaseModel):
 
     def __str__(self):
         return f"{self.student} - {self.assessment.title}"
+
+
+
+class GradePolicy(BaseModel):
+    """
+    Defines the grading policy for an academic term.
+    """
+
+    term = models.OneToOneField(
+        "academics.Term",
+        on_delete=models.CASCADE,
+        related_name="grade_policy",
+    )
+
+    name = models.CharField(max_length=100)
+
+    description = models.TextField(blank=True)
+
+
+
+class GradeScale(BaseModel):
+    """
+    Defines each grade within a grading policy.
+    """
+
+    grade_policy = models.ForeignKey(
+        GradePolicy,
+        on_delete=models.CASCADE,
+        related_name="grade_scales",
+    )
+
+    grade = models.CharField(max_length=2)
+
+    min_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+
+    max_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+
+    grade_points = models.DecimalField(max_digits=3, decimal_places=2)
+
+    remarks = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-min_percentage"]
