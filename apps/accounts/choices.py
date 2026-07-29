@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Roles(models.TextChoices):
+class Role(models.TextChoices):
     STUDENT = "student"
     FACULTY = "faculty"
     ADMIN = "admin"

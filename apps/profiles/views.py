@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.accounts.choices import Roles
+from apps.accounts.choices import Role
 from apps.profiles.models import (
     AdminProfile,
     BaseProfile,
@@ -30,7 +30,7 @@ User = get_user_model()
 
 def get_user_role(user):
     role_names = set(user.groups.values_list("name", flat=True))
-    for role in (Roles.STUDENT, Roles.FACULTY, Roles.ADMIN):
+    for role in (Role.STUDENT, Role.FACULTY, Role.ADMIN):
         if role in role_names:
             return role
     return None
@@ -41,15 +41,15 @@ class MyProfileView(APIView):
 
     def get_queryset(self):
         role = get_user_role(self.request.user)
-        if role == Roles.STUDENT:
+        if role == Role.STUDENT:
             return StudentProfile.objects.select_related(
                 "base_profile__user", "section"
             ).filter(base_profile__user_id=self.request.user.id)
-        elif role == Roles.FACULTY:
+        elif role == Role.FACULTY:
             return FacultyProfile.objects.select_related(
                 "base_profile__user", "department"
             ).filter(base_profile__user_id=self.request.user.id)
-        elif role == Roles.ADMIN:
+        elif role == Role.ADMIN:
             return AdminProfile.objects.select_related("base_profile__user").filter(
                 base_profile__user_id=self.request.user.id
             )
@@ -63,19 +63,19 @@ class MyProfileView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if role == Roles.STUDENT:
+        if role == Role.STUDENT:
             profile = StudentProfile.objects.select_related(
                 "base_profile__user", "section"
             ).get(base_profile__user_id=request.user.id)
             serializer = StudentProfileSerializer(profile)
 
-        elif role == Roles.FACULTY:
+        elif role == Role.FACULTY:
             profile = FacultyProfile.objects.select_related(
                 "base_profile__user", "department"
             ).get(base_profile__user_id=request.user.id)
             serializer = FacultyProfileSerializer(profile)
 
-        elif role == Roles.ADMIN:
+        elif role == Role.ADMIN:
             profile = AdminProfile.objects.select_related("base_profile__user").get(
                 base_profile__user_id=request.user.id
             )

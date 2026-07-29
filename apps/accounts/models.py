@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.accounts.choices import Role
 from apps.accounts.manager import UserManager
 from apps.core.models import BaseModel
 
@@ -11,6 +12,11 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_("email address"), unique=True)
     first_name = models.CharField(_("first name"), max_length=150)
     last_name = models.CharField(_("last name"), max_length=150)
+    role = models.CharField(
+        _("role"),
+        max_length=50,
+        choices=Role.choices,
+    )
 
     objects = UserManager()
 

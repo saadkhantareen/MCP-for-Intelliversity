@@ -29,21 +29,18 @@ class CourseOffering(BaseModel):
         return f"{self.curriculum_course.course.code} - {self.term.name}"
 
 
+# TODO: Create Policies for this model and other models and use JsonField where possible.
+# Policy for multiple/one faculty assignment to a course offering.
 class FacultyAssignment(BaseModel):
     course_offering = models.ForeignKey(
         "CourseOffering", on_delete=models.CASCADE, related_name="faculty_assignments"
     )
     faculty = models.ForeignKey(
-        "profiles.FacultyProfile",
-        on_delete=models.CASCADE,
-        related_name="assignments",
-        null=True,
-        blank=True,
+        "profiles.FacultyProfile", on_delete=models.CASCADE, related_name="assignments"
     )
     status = models.CharField(
         max_length=20,
         choices=AssignmentStatus.choices,
-        default=AssignmentStatus.PENDING,
     )
 
     class Meta:
@@ -51,7 +48,13 @@ class FacultyAssignment(BaseModel):
             models.UniqueConstraint(
                 fields=["course_offering", "faculty"],
                 name="unique_course_offering_faculty",
-            )
+            ),
+            # PREVENTS RACE CONDITIONS: Only 1 APPROVED assignment per offering
+            models.UniqueConstraint(
+                fields=["course_offering"],
+                condition=models.Q(status__in=[AssignmentStatus.APPROVED]),
+                name="unique_active_assignment_per_offering",
+            ),
         ]
 
     def __str__(self):
@@ -68,7 +71,7 @@ class Enrollment(BaseModel):
     status = models.CharField(
         max_length=20,
         choices=EnrollmentStatus.choices,
-        default=EnrollmentStatus.PENDING,
+        default=EnrollmentStatus.ENROLLED,
     )
 
     class Meta:

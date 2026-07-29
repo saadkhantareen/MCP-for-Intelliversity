@@ -9,7 +9,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.choices import Roles
+from apps.accounts.choices import Role
 from apps.accounts.validators import (
     validate_recaptcha,
     validate_strong_password,
@@ -29,7 +29,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     # Slug related field will return Group Object directly.
     role = serializers.SlugRelatedField(
         slug_field="name",
-        queryset=Group.objects.filter(name__in=Roles.values),
+        queryset=Group.objects.filter(name__in=Role.values),
         write_only=True,
     )
 

@@ -9,24 +9,24 @@ from apps.academics.models import (
     Batch,
     Course,
     Curriculum,
+    CurriculumCourse,
     Department,
     FacultyCourse,
     Program,
-    CurriculumCourse,
     Section,
     Term,
 )
 from apps.academics.utils.utils import set_prerequisites
 from apps.academics.validators import (
-    validate_curriculum_courses,
-    validate_prerequisites,
-    validate_start_lte_end,
     validate_already_active,
-    validate_no_previous_active_year,
-    validate_no_previous_active_term,
-    validate_program_curriculum_same,
+    validate_curriculum_courses,
     validate_max_students_available_capacity,
     validate_max_students_per_section,
+    validate_no_previous_active_term,
+    validate_no_previous_active_year,
+    validate_prerequisites,
+    validate_program_curriculum_same,
+    validate_start_lte_end,
 )
 from apps.profiles.models import FacultyProfile, StudentProfile
 
@@ -289,7 +289,7 @@ class SectionSerializer(serializers.ModelSerializer):
 class BatchAutoSectionSerializer(serializers.Serializer):
 
     def validate(self, attrs):
-        batch = self.context["batch"]  
+        batch = self.context["batch"]
         if batch.sections.exists():
             raise serializers.ValidationError(
                 {"batch": "Sections have already been generated for this batch."}
@@ -298,7 +298,7 @@ class BatchAutoSectionSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        batch = self.context['batch']
+        batch = self.context["batch"]
 
         with transaction.atomic():
             students = list(

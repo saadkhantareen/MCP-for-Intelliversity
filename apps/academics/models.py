@@ -1,40 +1,41 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.exceptions import ValidationError
+
 from apps.academics.choices import (
     AcademicStanding,
+    BatchStatus,
     CourseType,
     DegreeLevel,
     StudentTermStatus,
     TermType,
-    BatchStatus,
 )
 from apps.core.models import BaseModel
 
+
 # TODO: use this to make some features dynamic.
-# class AcademicPolicy(BaseModel):
-#     """
-#     Singleton model to store academic Policy for the university. This model is designed to have only one instance, which can be accessed and modified as needed.
-#     This is initialized on the University(tenant) setup.
-#     """
+class AcademicPolicy(BaseModel):
+    """
+    Singleton model to store academic Policy for the university. This model is designed to have only one instance, which can be accessed and modified as needed.
+    This is initialized on the University(tenant) setup.
+    """
 
-#     # max_credit_hours = models.PositiveIntegerField(default=18)
-#     # min_credit_hours = models.PositiveIntegerField(default=12)
-#     # attendance_percentage_required = models.PositiveSmallIntegerField(default=75)
-#     # allow_student_self_registration = models.BooleanField(default=True)
-#     # auto_assign_sections = models.BooleanField(default=True)
+    max_credit_hours = models.PositiveIntegerField(default=21)
+    min_credit_hours = models.PositiveIntegerField(default=12)
 
-#     class Meta:
-#         verbose_name = "Academic Policy"
+    # attendance_percentage_required = models.PositiveSmallIntegerField(default=75) can be in Attendance policy model if we have one.
 
-#     def save(self, *args, **kwargs):
-#         if not self.pk and AcademicPolicy.objects.exists():
-#             raise ValidationError("Only one AcademicPolicy instance is allowed.")
-#         return super().save(*args, **kwargs)
+    class Meta:
+        verbose_name = "Academic Policy"
 
-#     @classmethod
-#     def load(cls):
-#         return cls.objects.get()
+    def save(self, *args, **kwargs):
+        if not self.pk and AcademicPolicy.objects.exists():
+            raise ValidationError("Only one AcademicPolicy instance is allowed.")
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        return cls.objects.get()
 
 
 class Department(BaseModel):
@@ -233,6 +234,7 @@ class Term(BaseModel):
             )
         ]
 
+
 # Operational data
 class Batch(BaseModel):
     """
@@ -260,7 +262,8 @@ class Batch(BaseModel):
     )
     max_students = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     expected_current_semester = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)], default=1,
+        validators=[MinValueValidator(1)],
+        default=1,
         help_text="Current semester number for the batch. Help admin and system to get the current semester of the batch. This will be used to determine which courses are offered to the students of this batch.",
     )
     max_students_per_section = models.PositiveIntegerField(
@@ -286,7 +289,9 @@ class Section(BaseModel):
     batch = models.ForeignKey(
         "Batch", on_delete=models.CASCADE, related_name="sections"
     )
-    total_seats = models.PositiveIntegerField(help_text="Maximum number of students that can be registered for courses in this section.")
+    total_seats = models.PositiveIntegerField(
+        help_text="Maximum number of students that can be registered for courses in this section."
+    )
 
 
 class StudentTermRecord(BaseModel):

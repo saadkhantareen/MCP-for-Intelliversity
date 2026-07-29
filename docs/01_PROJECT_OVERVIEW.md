@@ -14,7 +14,7 @@ The backend uses a modular Django pattern with applications grouped inside the `
 Intelliversity-Backend
 ├── apps/
 │   ├── accounts/   # Central user authentication, User model
-│   ├── profiles/   # Roles and profile information (Student, Faculty, Admin)
+│   ├── profiles/   # Role and profile information (Student, Faculty, Admin)
 │   └── tenants/    # Multi-tenancy logic, Universities, and Portals
 ├── intelliversity/ # Core Django settings (settings.py, urls.py, wsgi, asgi)
 └── tests/          # Base test suites

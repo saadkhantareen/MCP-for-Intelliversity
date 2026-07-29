@@ -7,10 +7,10 @@ from apps.academics.models import (
     Course,
     CoursePrerequisite,
     Curriculum,
+    CurriculumCourse,
     Department,
     FacultyCourse,
     Program,
-    CurriculumCourse,
     Section,
     StudentTermRecord,
     Term,
@@ -161,7 +161,7 @@ class Command(BaseCommand):
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Successfully Configured Roles and Assigned Permissions in {university.name}."
+                        f"Successfully Configured Role and Assigned Permissions in {university.name}."
                     )
                 )
 

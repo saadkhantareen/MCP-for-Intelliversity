@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.choices import Roles
+from apps.accounts.choices import Role
 from apps.accounts.serializers import (
     LoginSerializer,
     PasswordResetConfirmSerializer,
@@ -24,7 +24,7 @@ class RegisterView(APIView):
     def post(self, request):
 
         requested_role = request.data.get("role")
-        if requested_role and requested_role != Roles.ADMIN:
+        if requested_role and requested_role != Role.ADMIN:
             return Response(
                 {"detail": "Only admin role can be registered via this endpoint."},
                 status=status.HTTP_400_BAD_REQUEST,

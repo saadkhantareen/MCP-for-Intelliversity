@@ -115,6 +115,12 @@ class FacultyProfile(BaseModel):
         blank=True,
         related_name="faculty_members",
     )
+    max_credits_per_term = models.PositiveIntegerField(
+        _("max credits per term"), default=12
+    )
+    min_credits_per_term = models.PositiveIntegerField(
+        _("min credits per term"), default=6
+    )
 
     class Meta:
         verbose_name = _("faculty profile")

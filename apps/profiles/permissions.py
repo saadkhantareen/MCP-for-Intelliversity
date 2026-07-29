@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 
 
+# TODO: Refactor this permission class where it could actually create value.
 class IsOwnerOrAdmin(BasePermission):
     def has_object_permission(self, request, view, obj):
         if (
@@ -31,3 +32,15 @@ class IsOwnerOrAdmin(BasePermission):
             return False
 
         return False
+
+
+class IsFaculty(BasePermission):
+
+    def has_permission(self, request, view):
+        return request.user.role == "faculty"
+
+
+class IsStudent(BasePermission):
+
+    def has_permission(self, request, view):
+        return request.user.role == "student"
