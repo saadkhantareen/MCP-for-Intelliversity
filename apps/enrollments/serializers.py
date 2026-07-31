@@ -2,13 +2,19 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.academics.choices import BatchStatus
-from apps.academics.models import Batch, CurriculumCourse, FacultyCourse, Section, Term
-from apps.enrollments.choices import AssignmentStatus, EnrollmentStatus
+from apps.academics.models import Batch, CurriculumCourse, Section, Term
+from apps.enrollments.choices import EnrollmentStatus
 from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.enrollments.validators import (
+    validate_assignment_period,
     validate_course_offering,
+    validate_course_offering_capacity,
     validate_faculty,
     validate_faculty_credits,
+    validate_registration_period,
+    validate_student,
+    validate_student_credits,
+    validate_student_prerequisites,
 )
 from apps.profiles.models import FacultyProfile, StudentProfile
 
@@ -84,6 +90,10 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
 
         for batch in batches:
             sections = list(batch.sections.all())
+            capacity = (
+                batch.max_students_per_section
+            )  # Use the batch's max_students_per_section for each offering then admin can change it later if needed. This is to ensure that the offering has a capacity set initially.
+
             if not sections:
                 continue
 
@@ -99,6 +109,7 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
                             curriculum_course=cc,
                             term=term,
                             section=section,
+                            capacity=capacity,
                         )
                     )
 
@@ -150,22 +161,19 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
         validate_faculty(self, attrs)
         validate_faculty_credits(self, attrs)
         validate_course_offering(self, attrs)
-        # validate_registration_period(self, attrs) # from term.
+        validate_assignment_period(self, attrs)
         return attrs
 
     def create(self, validated_data):
 
         course_offering = validated_data["course_offering"]
-
         try:
             with transaction.atomic():
                 # Lock the CourseOffering row to block concurrent claims
                 offering = CourseOffering.objects.select_for_update().get(
                     pk=course_offering.pk
                 )
-
                 return super().create(validated_data)
-
         except Exception as e:
             raise serializers.ValidationError(
                 f"Failed to assign faculty to course offering {course_offering}. It might be already assigned. Error: {str(e)}"
@@ -176,16 +184,12 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
         course_offering = validated_data.get(
             "course_offering", instance.course_offering
         )
-
         try:
             with transaction.atomic():
-                # Lock the CourseOffering row to block concurrent claims
                 offering = CourseOffering.objects.select_for_update().get(
                     pk=course_offering.pk
                 )
-
                 return super().update(instance, validated_data)
-
         except Exception as e:
             raise serializers.ValidationError(
                 f"Failed to update faculty assignment for course offering {course_offering}. It might be already assigned. Error: {str(e)}"
@@ -203,11 +207,12 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         fields = ["id", "course_offering", "student", "status"]
 
     def validate(self, attrs):
-        # validate_student(self, attrs) # if it is self or admin enrolling student.
-        # validate_registration_period(self, attrs) # from term.
-        # validate_student_credits(self, attrs) # from academics policy
-        # validate_student_prerequisites(self, attrs) # from academics policy
-        # validate_course_section_capacity(self, attrs) # from section seets
+        validate_student(self, attrs)
+        validate_registration_period(self, attrs)
+        validate_student_credits(self, attrs)
+        validate_student_prerequisites(self, attrs)
+        validate_course_offering_capacity(self, attrs)
+
         return attrs
 
     def create(self, validated_data):

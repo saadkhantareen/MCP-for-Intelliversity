@@ -15,7 +15,8 @@ from apps.academics.models import (
     StudentTermRecord,
     Term,
 )
-from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
+# fetch the roles from the choices to make codebase consistent
+from apps.enrollments.models import CourseOffering, FacultyAssignment, Enrollment
 from apps.finance.models import StudentFeeInvoice
 from apps.profiles.models import (
     AdminProfile,
@@ -118,7 +119,7 @@ class Command(BaseCommand):
 
                 faculty_manage_models = [
                     FacultyCourse,
-                    FacultyCourseEnrollment,
+                    FacultyAssignment,
                     StudentTermRecord,
                     FacultyProfile,
                     Document,
@@ -138,7 +139,7 @@ class Command(BaseCommand):
                 assign_perms(student_group, student_view_models, ["view"])
 
                 student_manage_models = [
-                    StudentCourseEnrollment,
+                    Enrollment,
                     StudentProfile,
                     Document,
                 ]

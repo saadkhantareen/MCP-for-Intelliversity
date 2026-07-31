@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from apps.academics.choices import (
     AcademicStanding,
@@ -20,8 +21,8 @@ class AcademicPolicy(BaseModel):
     This is initialized on the University(tenant) setup.
     """
 
-    max_credit_hours = models.PositiveIntegerField(default=21)
-    min_credit_hours = models.PositiveIntegerField(default=12)
+    max_credits_per_term = models.PositiveIntegerField(default=21)
+    min_credits_per_term = models.PositiveIntegerField(default=12)
 
     # attendance_percentage_required = models.PositiveSmallIntegerField(default=75) can be in Attendance policy model if we have one.
 
@@ -234,6 +235,39 @@ class Term(BaseModel):
             )
         ]
 
+    @property
+    def is_registration_open(self):
+        today = timezone.now().date()
+        return (
+            self.course_registration_start_date
+            <= today
+            <= self.course_registration_end_date
+        )
+
+    @property
+    def is_faculty_assignment_open(self):
+        today = timezone.now().date()
+        return (
+            self.faculty_course_assignment_start_date
+            <= today
+            <= self.faculty_course_assignment_end_date
+        )
+
+    @property
+    def is_drop_open(self):
+        today = timezone.now().date()
+        return self.course_registration_start_date <= today <= self.course_drop_deadline
+
+    @property
+    def is_withdraw_open(self):
+        today = timezone.now().date()
+        return self.course_drop_deadline <= today <= self.course_withdraw_deadline
+
+    @property
+    def is_term_started(self):
+        today = timezone.now().date()
+        return self.start_date <= today <= self.end_date
+
 
 # Operational data
 class Batch(BaseModel):
@@ -288,9 +322,6 @@ class Section(BaseModel):
     name = models.CharField(max_length=10)
     batch = models.ForeignKey(
         "Batch", on_delete=models.CASCADE, related_name="sections"
-    )
-    total_seats = models.PositiveIntegerField(
-        help_text="Maximum number of students that can be registered for courses in this section."
     )
 
 

@@ -1,31 +1,22 @@
 from django.db import models
 from rest_framework import serializers
 
+from apps.academics.models import AcademicPolicy
 from apps.enrollments.choices import AssignmentStatus
-from apps.enrollments.models import FacultyAssignment
+from apps.enrollments.models import Enrollment, FacultyAssignment
 
 
 def validate_faculty(self, attrs):
     request = self.context.get("request")
+    faculty = attrs.get("faculty")
 
-    if request and hasattr(request, "user"):
-        user = request.user
-        faculty_profile = getattr(user, "faculty_profile", None)
+    if request.user.is_admin and faculty is None:
+        raise serializers.ValidationError({
+            "faculty": "Faculty is required."
+        })
 
-        if faculty_profile:
-            # Request IS from a Faculty member (Self-claiming)
-            # If they didn't pass faculty ID, auto-populate with their own profile
-            if "faculty" not in attrs:
-                attrs["faculty"] = faculty_profile
-        else:
-            # Request IS NOT from a Faculty member (e.g. Admin / HOD)
-            # Ensure the 'faculty' field was provided in the payload
-            if "faculty" not in attrs or attrs["faculty"] is None:
-                raise serializers.ValidationError(
-                    {
-                        "faculty": "Faculty field is required when assigned by an administrator or non-faculty user."
-                    }
-                )
+    return attrs
+        
 
 
 def validate_faculty_credits(self, attrs):
@@ -75,4 +66,123 @@ def validate_course_offering(self, attrs):
     if existing_assignment:
         raise serializers.ValidationError(
             f"This Course offering is already assigned to another faculty member."
+        )
+
+
+def validate_assignment_period(self, attrs):
+    """
+    Validates that the course offering is within the assignment period.
+    """
+    course_offering = attrs.get("course_offering")
+
+    if not course_offering:
+        return
+
+    term = course_offering.term
+    if not term.is_faculty_assignment_open():
+        raise serializers.ValidationError(
+            f"Cannot Assign Faculty before/after assignment period."
+        )
+
+
+def validate_student(self, attrs):
+    request = self.context.get("request")
+    student = attrs.get("student")
+
+    if request.user.is_admin and student is None:
+        raise serializers.ValidationError({
+            "student": "Student is required."
+        })
+
+    return attrs
+
+
+def validate_registration_period(self, attrs):
+    """
+    Validates that the course offering is within the enrollment period.
+    """
+    course_offering = attrs.get("course_offering")
+
+    if not course_offering:
+        return
+
+    term = course_offering.term
+    if not term.is_registration_open():
+        raise serializers.ValidationError(
+            f"Cannot Enroll before/after registration period."
+        )
+
+
+def validate_student_credits(self, attrs):  # from academics policy
+    """
+    Validates that the student does not exceed their maximum credit limit for the term.
+    """
+    student = attrs.get("student")
+    course_offering = attrs.get("course_offering")
+
+    if not student or not course_offering:
+        return
+
+    # Get the total credits for the student in the term of the course offering
+    total_credits = (
+        Enrollment.objects.filter(
+            student=student,
+            course_offering__term=course_offering.term,
+            status="enrolled",
+        )
+        .aggregate(total=models.Sum("course_offering__course__credit_hours"))
+        .get("total", 0)
+    )
+
+    # Add the credits of the new course offering
+    total_credits += course_offering.course.credit_hours
+
+    academic_policy = AcademicPolicy.load()
+
+    if total_credits > academic_policy.max_credits_per_term:
+        raise serializers.ValidationError(
+            f"Student {student} exceeds maximum credit limit of {academic_policy.max_credits_per_term}."
+        )
+
+
+def validate_student_prerequisites(self, attrs):
+    """
+    Validates that the student has completed the prerequisites for the course offering.
+    """
+    student = attrs.get("student")
+    course_offering = attrs.get("course_offering")
+
+    if not student or not course_offering:
+        return
+
+    prerequisites = course_offering.curriculum_course.course.prerequisites.all()
+
+    for prerequisite in prerequisites:
+        if not Enrollment.objects.filter(
+            student=student,
+            course_offering__curriculum_course=prerequisite,
+            status="enrolled",
+        ).exists():
+            raise serializers.ValidationError(
+                f"Student {student} has not completed the prerequisite {prerequisite} for this course offering."
+            )
+
+
+def validate_course_offering_capacity(self, attrs):
+    """
+    Validates that the course offering's section has not exceeded its capacity.
+    """
+    course_offering = attrs.get("course_offering")
+
+    if not course_offering:
+        return
+
+    capacity = course_offering.capacity
+    current_enrollment_count = course_offering.enrollments.filter(
+        status="enrolled"
+    ).count()
+
+    if current_enrollment_count >= capacity:
+        raise serializers.ValidationError(
+            f"The section {course_offering.section} has reached its maximum capacity of {capacity} students."
         )

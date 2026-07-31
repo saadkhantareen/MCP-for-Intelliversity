@@ -1,11 +1,9 @@
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
+from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from apps.academics.models import CurriculumCourse, Section, Term
 from apps.enrollments.filters import CourseOfferingFilter
 from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.enrollments.serializers import (
@@ -14,7 +12,7 @@ from apps.enrollments.serializers import (
     FacultyAssignmentSerializer,
     GenerateCourseOfferingsSerializer,
 )
-from apps.profiles.permissions import IsFaculty, IsStudent
+from apps.profiles.permissions import IsAdminOrFaculty, IsAdminOrStudent, IsFaculty, IsStudent
 
 
 class CourseOfferingViewSet(ModelViewSet):
@@ -127,34 +125,48 @@ class CourseOfferingViewSet(ModelViewSet):
 
 
 class FacultyAssignmentViewSet(ModelViewSet):
-    queryset = FacultyAssignment.objects.select_related(
-        "course_offering__curriculum_course__course",
-        "course_offering__term",
-        "course_offering__section__batch",
-        "faculty__base_profile__user",
-    )
 
     serializer_class = FacultyAssignmentSerializer
-    permission_classes = [DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions, IsAdminOrFaculty]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["request"] = self.request
-        return context
+    def get_queryset(self):
+        queryset = FacultyAssignment.objects.select_related(
+            "course_offering__curriculum_course__course",
+            "course_offering__term",
+            "course_offering__section__batch",
+            "faculty__base_profile__user",
+        )
+
+        user = self.request.user
+
+        if user.is_admin:
+            return queryset
+
+        if user.is_faculty:
+            return queryset.filter(faculty__base_profile__user=user)
+
+        return queryset.none()
 
 
 class EnrollmentViewSet(ModelViewSet):
-    queryset = Enrollment.objects.select_related(
-        "course_offering__curriculum_course__course",
-        "course_offering__term",
-        "course_offering__section__batch",
-        "student__base_profile__user",
-    )
 
     serializer_class = EnrollmentSerializer
-    permission_classes = [DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions, IsAdminOrStudent]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["request"] = self.request
-        return context
+    def get_queryset(self):
+        queryset = Enrollment.objects.select_related(
+            "course_offering__curriculum_course__course",
+            "course_offering__term",
+            "course_offering__section__batch",
+            "student__base_profile__user",
+        )
+
+        user = self.request.user
+
+        if user.is_admin:
+            return queryset
+
+        if user.is_student:
+            return queryset.filter(student__base_profile__user=user)
+
+        return queryset.none()
