@@ -1,50 +1,83 @@
 from django.db import models
 
 from apps.core.models import BaseModel
+from apps.enrollments.choices import AssignmentStatus, EnrollmentStatus
 
 
-class FacultyCourseAssignment(BaseModel):
+class CourseOffering(BaseModel):
+    curriculum_course = models.ForeignKey(
+        "academics.CurriculumCourse",
+        on_delete=models.CASCADE,
+        related_name="course_offerings",
+    )
+    term = models.ForeignKey(
+        "academics.Term", on_delete=models.CASCADE, related_name="course_offerings"
+    )
+    section = models.ForeignKey(
+        "academics.Section", on_delete=models.CASCADE, related_name="course_offerings"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["curriculum_course", "term", "section"],
+                name="unique_course_offering",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.curriculum_course.course.code} - {self.term.name}"
+
+
+class FacultyAssignment(BaseModel):
+    course_offering = models.ForeignKey(
+        "CourseOffering", on_delete=models.CASCADE, related_name="faculty_assignments"
+    )
     faculty = models.ForeignKey(
         "profiles.FacultyProfile",
         on_delete=models.CASCADE,
-        related_name="course_assignments",
+        related_name="assignments",
+        null=True,
+        blank=True,
     )
-    course = models.ForeignKey(
-        "academics.Course", on_delete=models.CASCADE, related_name="faculty_assignments"
-    )
-    term = models.ForeignKey(
-        "academics.Term", on_delete=models.CASCADE, related_name="course_assignments"
-    )
-    section = models.ForeignKey(
-        "academics.Section", on_delete=models.CASCADE, related_name="course_assignments"
+    status = models.CharField(
+        max_length=20,
+        choices=AssignmentStatus.choices,
+        default=AssignmentStatus.PENDING,
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["faculty", "course", "term", "section"],
-                name="unique_faculty_course_term_assignment",
+                fields=["course_offering", "faculty"],
+                name="unique_course_offering_faculty",
             )
         ]
 
+    def __str__(self):
+        return f"{self.course_offering} - {self.faculty}"
 
-class StudentCourseEnrollment(BaseModel):
+
+class Enrollment(BaseModel):
+    course_offering = models.ForeignKey(
+        "CourseOffering", on_delete=models.CASCADE, related_name="enrollments"
+    )
     student = models.ForeignKey(
-        "profiles.StudentProfile",
-        on_delete=models.CASCADE,
-        related_name="course_enrollments",
+        "profiles.StudentProfile", on_delete=models.CASCADE, related_name="enrollments"
     )
-    course = models.ForeignKey(
-        "academics.Course", on_delete=models.CASCADE, related_name="student_enrollments"
-    )
-    term = models.ForeignKey(
-        "academics.Term", on_delete=models.CASCADE, related_name="student_enrollments"
+    status = models.CharField(
+        max_length=20,
+        choices=EnrollmentStatus.choices,
+        default=EnrollmentStatus.PENDING,
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["student", "course", "term"],
-                name="unique_student_course_term_enrollment",
+                fields=["course_offering", "student"],
+                name="unique_course_offering_student",
             )
         ]
+
+    def __str__(self):
+        return f"{self.course_offering} - {self.student}"

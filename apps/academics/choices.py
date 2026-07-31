@@ -34,3 +34,9 @@ class AcademicStanding(models.TextChoices):
     PROBATION = "PROBATION", _("Academic Probation")
     SUSPENDED = "SUSPENDED", _("Suspended")
     EXPELLED = "EXPELLED", _("Expelled")
+
+
+class BatchStatus(models.TextChoices):
+    ACTIVE = "ACTIVE", _("Active")
+    INACTIVE = "INACTIVE", _("Inactive")
+    GRADUATED = "GRADUATED", _("Graduated")

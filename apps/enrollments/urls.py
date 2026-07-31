@@ -1,40 +1,11 @@
-from django.urls import path
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.enrollments.views import (
-    FacultyCourseAssignmentViewSet,
-    GetCoursesForFacultyEnrollementView,
-    GetCoursesForStudentEnrollmentView,
-    StudentCourseEnrollmentDeleteAPIView,
-    StudentCourseEnrollmentListCreateAPIView,
-)
+from apps.enrollments.views import CourseOfferingViewSet
 
 router = DefaultRouter()
-router.register(
-    r"faculty/courses", FacultyCourseAssignmentViewSet, basename="faculty-enrollment"
-)
+router.register(r"course-offerings", CourseOfferingViewSet, basename="course-offering")
 
 urlpatterns = [
-    path(
-        "faculty/courses-for-enrollment/",
-        GetCoursesForFacultyEnrollementView.as_view(),
-        name="get-courses-for-faculty-enrollment",
-    ),
-    path(
-        "student/courses-for-enrollment/",
-        GetCoursesForStudentEnrollmentView.as_view(),
-        name="get-courses-for-student-enrollment",
-    ),
-    path(
-        "student/enrollments/",
-        StudentCourseEnrollmentListCreateAPIView.as_view(),
-        name="student-course-enrollment",
-    ),
-    path(
-        "student/enrollments/<int:pk>/",
-        StudentCourseEnrollmentDeleteAPIView.as_view(),
-        name="student-enrollment-detail",
-    ),
+    path("", include(router.urls)),
 ]
-
-urlpatterns += router.urls
