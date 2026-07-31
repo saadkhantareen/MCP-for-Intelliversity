@@ -353,3 +353,21 @@ class StudentTermRecord(BaseModel):
                 fields=["student", "term"], name="unique_student_term_record"
             )
         ]
+
+
+class CourseOffering(BaseModel):
+    """
+    Represents the actual offering of a course in a specific term and section.
+
+    A faculty member may be assigned to teach a course (FacultyCourse), while
+    CourseOffering specifies when and to which section that course is taught.
+
+    This model is used by Attendance, Examination, and other academic modules
+    to identify the correct group of students for a course.
+    """
+
+    faculty_course = models.ForeignKey(FacultyCourse, on_delete=models.CASCADE)
+
+    term = models.ForeignKey(Term, on_delete=models.CASCADE)
+
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
