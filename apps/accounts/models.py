@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.accounts.choices import Role
 from apps.accounts.manager import UserManager
 from apps.core.models import BaseModel
 
@@ -38,11 +39,25 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    @property
     def get_full_name(self):
         full_name = f"{self.first_name} {self.last_name}"
         return full_name.strip()
 
+    @property
     def get_short_name(self):
         return self.first_name
 
-    # implement property is_admin, etc
+    @property
+    def is_admin(self):
+        return self.groups.filter(name=Role.ADMIN).exists()
+
+    @property
+    def is_faculty(self):
+        return self.groups.filter(name=Role.FACULTY).exists()
+
+    @property
+    def is_student(self):
+        return self.groups.filter(name=Role.STUDENT).exists()
+
+    # TODO: add more properties for other roles if needed in future.

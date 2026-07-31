@@ -15,7 +15,9 @@ from apps.academics.models import (
     StudentTermRecord,
     Term,
 )
-from apps.enrollments.models import FacultyCourseEnrollment, StudentCourseEnrollment
+
+# fetch the roles from the choices to make codebase consistent
+from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.finance.models import StudentFeeInvoice
 from apps.profiles.models import (
     AdminProfile,
@@ -118,7 +120,7 @@ class Command(BaseCommand):
 
                 faculty_manage_models = [
                     FacultyCourse,
-                    FacultyCourseEnrollment,
+                    FacultyAssignment,
                     StudentTermRecord,
                     FacultyProfile,
                     Document,
@@ -138,7 +140,7 @@ class Command(BaseCommand):
                 assign_perms(student_group, student_view_models, ["view"])
 
                 student_manage_models = [
-                    StudentCourseEnrollment,
+                    Enrollment,
                     StudentProfile,
                     Document,
                 ]
@@ -161,7 +163,7 @@ class Command(BaseCommand):
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Successfully Configured Roles and Assigned Permissions in {university.name}."
+                        f"Successfully Configured Role and Assigned Permissions in {university.name}."
                     )
                 )
 
