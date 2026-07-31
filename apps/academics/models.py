@@ -233,6 +233,7 @@ class Term(BaseModel):
             )
         ]
 
+
 # Operational data
 class Batch(BaseModel):
     """
@@ -260,7 +261,8 @@ class Batch(BaseModel):
     )
     max_students = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     expected_current_semester = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)], default=1,
+        validators=[MinValueValidator(1)],
+        default=1,
         help_text="Current semester number for the batch. Help admin and system to get the current semester of the batch. This will be used to determine which courses are offered to the students of this batch.",
     )
     max_students_per_section = models.PositiveIntegerField(
@@ -286,7 +288,9 @@ class Section(BaseModel):
     batch = models.ForeignKey(
         "Batch", on_delete=models.CASCADE, related_name="sections"
     )
-    total_seats = models.PositiveIntegerField(help_text="Maximum number of students that can be registered for courses in this section.")
+    total_seats = models.PositiveIntegerField(
+        help_text="Maximum number of students that can be registered for courses in this section."
+    )
 
 
 class StudentTermRecord(BaseModel):
@@ -320,7 +324,6 @@ class StudentTermRecord(BaseModel):
 
 
 class CourseOffering(BaseModel):
-
     """
     Represents the actual offering of a course in a specific term and section.
 
@@ -330,18 +333,9 @@ class CourseOffering(BaseModel):
     This model is used by Attendance, Examination, and other academic modules
     to identify the correct group of students for a course.
     """
-     
-    faculty_course = models.ForeignKey(
-        FacultyCourse,
-        on_delete=models.CASCADE
-    )
 
-    term = models.ForeignKey(
-        Term,
-        on_delete=models.CASCADE
-    )
+    faculty_course = models.ForeignKey(FacultyCourse, on_delete=models.CASCADE)
 
-    section = models.ForeignKey(
-        Section,
-        on_delete=models.CASCADE
-    )
+    term = models.ForeignKey(Term, on_delete=models.CASCADE)
+
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)

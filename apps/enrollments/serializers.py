@@ -1,8 +1,8 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from apps.academics.models import Batch, CurriculumCourse, Section, Term
 from apps.academics.choices import BatchStatus
+from apps.academics.models import Batch, CurriculumCourse, Section, Term
 from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.profiles.models import FacultyProfile
 

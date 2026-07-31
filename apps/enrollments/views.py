@@ -1,9 +1,9 @@
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.decorators import action
 
 from apps.academics.models import CurriculumCourse, Section, Term
 from apps.enrollments.filters import CourseOfferingFilter
@@ -39,5 +39,3 @@ class CourseOfferingViewSet(ModelViewSet):
         serializer.save()
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-

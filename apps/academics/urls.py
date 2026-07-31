@@ -2,7 +2,6 @@ from rest_framework.routers import DefaultRouter
 
 from apps.academics.views import (
     AcademicYearViewSet,
-    TermViewSet,
     BatchViewSet,
     CourseViewSet,
     CurriculumViewSet,
@@ -10,6 +9,7 @@ from apps.academics.views import (
     FacultyCourseViewSet,
     ProgramViewSet,
     SectionViewSet,
+    TermViewSet,
 )
 
 router = DefaultRouter()

@@ -289,7 +289,7 @@ class SectionSerializer(serializers.ModelSerializer):
 class BatchAutoSectionSerializer(serializers.Serializer):
 
     def validate(self, attrs):
-        batch = self.context["batch"]  
+        batch = self.context["batch"]
         if batch.sections.exists():
             raise serializers.ValidationError(
                 {"batch": "Sections have already been generated for this batch."}
@@ -298,7 +298,7 @@ class BatchAutoSectionSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        batch = self.context['batch']
+        batch = self.context["batch"]
 
         with transaction.atomic():
             students = list(

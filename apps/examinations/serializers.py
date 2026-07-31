@@ -1,13 +1,13 @@
-from rest_framework import serializers
 from django.db.models import Sum
+from rest_framework import serializers
 
 from .models import (
-    AssessmentType,
-    AssessmentPolicy,
     Assessment,
-    StudentAssessment,
+    AssessmentPolicy,
+    AssessmentType,
     GradePolicy,
     GradeScale,
+    StudentAssessment,
 )
 
 
@@ -37,16 +37,15 @@ class AssessmentTypeSerializer(serializers.ModelSerializer):
         return value.upper()
 
 
-
 class AssessmentPolicySerializer(serializers.ModelSerializer):
     """
     PURPOSE:
-    Configures university/admin assessment policy per academic term (e.g., defining 
+    Configures university/admin assessment policy per academic term (e.g., defining
     how many quizzes/midterms exist and their total percentage weightage).
 
     VALIDATIONS:
     1. Active Status Check: Prevents assigning an inactive AssessmentType to a policy.
-    2. Total Weightage Check: Ensures the cumulative policy weightage for a term 
+    2. Total Weightage Check: Ensures the cumulative policy weightage for a term
        does not exceed 100%.
     """
 
@@ -79,9 +78,11 @@ class AssessmentPolicySerializer(serializers.ModelSerializer):
 
         # 1. Ensure the linked AssessmentType is active
         if assessment_type and not assessment_type.is_active:
-            raise serializers.ValidationError({
-                "assessment_type": "Cannot assign an inactive assessment type to a policy."
-            })
+            raise serializers.ValidationError(
+                {
+                    "assessment_type": "Cannot assign an inactive assessment type to a policy."
+                }
+            )
 
         # 2. Ensure total term weightage does not exceed 100%
         if term and total_weightage is not None:
@@ -95,9 +96,11 @@ class AssessmentPolicySerializer(serializers.ModelSerializer):
 
             if current_total + total_weightage > 100:
                 remaining = 100 - current_total
-                raise serializers.ValidationError({
-                    "total_weightage": f"Total weightage for term '{term}' cannot exceed 100%. Remaining available: {remaining}%."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "total_weightage": f"Total weightage for term '{term}' cannot exceed 100%. Remaining available: {remaining}%."
+                    }
+                )
 
         return attrs
 
@@ -128,14 +131,20 @@ class GradeScaleSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def validate(self, attrs):
-        min_pct = attrs.get("min_percentage", getattr(self.instance, "min_percentage", None))
-        max_pct = attrs.get("max_percentage", getattr(self.instance, "max_percentage", None))
+        min_pct = attrs.get(
+            "min_percentage", getattr(self.instance, "min_percentage", None)
+        )
+        max_pct = attrs.get(
+            "max_percentage", getattr(self.instance, "max_percentage", None)
+        )
 
         if min_pct is not None and max_pct is not None:
             if min_pct >= max_pct:
-                raise serializers.ValidationError({
-                    "min_percentage": "Minimum percentage must be less than maximum percentage."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "min_percentage": "Minimum percentage must be less than maximum percentage."
+                    }
+                )
 
             if min_pct < 0 or max_pct > 100:
                 raise serializers.ValidationError(
@@ -143,7 +152,6 @@ class GradeScaleSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
-
 
 
 class GradePolicySerializer(serializers.ModelSerializer):
@@ -169,7 +177,6 @@ class GradePolicySerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
@@ -205,22 +212,24 @@ class AssessmentSerializer(serializers.ModelSerializer):
         marks_submitted = attrs.get(
             "marks_submitted", getattr(instance, "marks_submitted", False)
         )
-        total_marks = attrs.get(
-            "total_marks", getattr(instance, "total_marks", None)
-        )
+        total_marks = attrs.get("total_marks", getattr(instance, "total_marks", None))
 
         # 1. Prevent editing total marks if already finalized
         if instance and instance.marks_submitted:
             if "total_marks" in attrs and attrs["total_marks"] != instance.total_marks:
-                raise serializers.ValidationError({
-                    "total_marks": "Total marks cannot be modified after results have been finalized."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "total_marks": "Total marks cannot be modified after results have been finalized."
+                    }
+                )
 
         # 2. Require valid total marks prior to final submission
         if marks_submitted and (total_marks is None or total_marks <= 0):
-            raise serializers.ValidationError({
-                "marks_submitted": "Cannot finalize assessment without specifying valid total marks."
-            })
+            raise serializers.ValidationError(
+                {
+                    "marks_submitted": "Cannot finalize assessment without specifying valid total marks."
+                }
+            )
 
         return attrs
 
@@ -255,9 +264,7 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def validate(self, attrs):
-        assessment = attrs.get(
-            "assessment", getattr(self.instance, "assessment", None)
-        )
+        assessment = attrs.get("assessment", getattr(self.instance, "assessment", None))
         student = attrs.get("student", getattr(self.instance, "student", None))
         obtained_marks = attrs.get(
             "obtained_marks", getattr(self.instance, "obtained_marks", None)
@@ -272,13 +279,17 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
         # 2. Check upper bound limit
         if obtained_marks is not None and assessment:
             if assessment.total_marks is None:
-                raise serializers.ValidationError({
-                    "obtained_marks": "Set the assessment total marks before assigning student scores."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "obtained_marks": "Set the assessment total marks before assigning student scores."
+                    }
+                )
             if obtained_marks > assessment.total_marks:
-                raise serializers.ValidationError({
-                    "obtained_marks": f"Obtained marks ({obtained_marks}) cannot exceed total marks ({assessment.total_marks})."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "obtained_marks": f"Obtained marks ({obtained_marks}) cannot exceed total marks ({assessment.total_marks})."
+                    }
+                )
 
         # 3. Verify student enrollment in the course offering
         if student and assessment:
@@ -286,12 +297,13 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
                 course_offering=assessment.course_offering, is_active=True
             ).exists()
             if not is_enrolled:
-                raise serializers.ValidationError({
-                    "student": f"Student '{student}' is not actively enrolled in this course offering."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "student": f"Student '{student}' is not actively enrolled in this course offering."
+                    }
+                )
 
         return attrs
-
 
 
 class GradebookStudentMarkItemSerializer(serializers.Serializer):
@@ -340,12 +352,13 @@ class FacultyGradebookUpdateSerializer(serializers.Serializer):
         for item in students_marks:
             obtained = item.get("obtained_marks")
             if obtained is not None and obtained > total_marks:
-                raise serializers.ValidationError({
-                    "students_marks": f"Marks ({obtained}) for Student ID {item['student_id']} exceed total marks ({total_marks})."
-                })
+                raise serializers.ValidationError(
+                    {
+                        "students_marks": f"Marks ({obtained}) for Student ID {item['student_id']} exceed total marks ({total_marks})."
+                    }
+                )
 
         return attrs
-
 
 
 class StudentPortalAssessmentSerializer(serializers.ModelSerializer):
@@ -355,9 +368,7 @@ class StudentPortalAssessmentSerializer(serializers.ModelSerializer):
     Displays assessment details along with obtained scores and remarks for published assessments.
     """
 
-    assessment_title = serializers.CharField(
-        source="assessment.title", read_only=True
-    )
+    assessment_title = serializers.CharField(source="assessment.title", read_only=True)
     assessment_type = serializers.CharField(
         source="assessment.assessment_type.name", read_only=True
     )

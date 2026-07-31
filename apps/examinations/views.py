@@ -4,8 +4,8 @@ from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.academics.models import CourseOffering, StudentTermRecord, Term
 from apps.accounts.models import Roles
-from apps.academics.models import Term, StudentTermRecord, CourseOffering
 from apps.examinations.models import (
     Assessment,
     AssessmentPolicy,
@@ -23,17 +23,22 @@ from apps.examinations.serializers import (
     GradeScaleSerializer,
     StudentAssessmentSerializer,
 )
+
 from .permissions import IsAdminUserOrReadOnly, IsFacultyUser
 from .services import calculate_and_save_term_results
 
-
 # 1. ADMIN APIS (Types, Policies & Grading Setup)
+
 
 class AssessmentTypeViewSet(viewsets.ModelViewSet):
     queryset = AssessmentType.objects.all()
     serializer_class = AssessmentTypeSerializer
     permission_classes = [IsAdminUserOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["is_active"]
     search_fields = ["name", "code"]
 
@@ -47,7 +52,11 @@ class AssessmentPolicyViewSet(viewsets.ModelViewSet):
 
 
 class GradePolicyViewSet(viewsets.ModelViewSet):
-    queryset = GradePolicy.objects.prefetch_related("grade_scales").select_related("term").all()
+    queryset = (
+        GradePolicy.objects.prefetch_related("grade_scales")
+        .select_related("term")
+        .all()
+    )
     serializer_class = GradePolicySerializer
     permission_classes = [IsAdminUserOrReadOnly]
     filterset_fields = ["term"]
@@ -60,17 +69,18 @@ class GradeScaleViewSet(viewsets.ModelViewSet):
     filterset_fields = ["grade_policy"]
 
 
-
 # 2. FACULTY APIS (Course Offering Assessments & Marks Entry)
+
 
 class FacultyAssessmentViewSet(viewsets.ModelViewSet):
     """
     Faculty endpoints mapped to CourseOffering -> FacultyCourse -> FacultyProfile
     """
+
     queryset = Assessment.objects.select_related(
         "course_offering__faculty_course__faculty",
         "course_offering__faculty_course__course",
-        "assessment_type"
+        "assessment_type",
     ).all()
     serializer_class = AssessmentSerializer
     permission_classes = [IsFacultyUser]
@@ -97,13 +107,16 @@ class FacultyAssessmentViewSet(viewsets.ModelViewSet):
         ).select_related("student")
 
         serializer = StudentAssessmentSerializer(student_assessments, many=True)
-        return Response({
-            "assessment_id": assessment.id,
-            "assessment_title": assessment.title,
-            "total_marks": assessment.total_marks,
-            "marks_submitted": assessment.marks_submitted,
-            "students": serializer.data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "assessment_id": assessment.id,
+                "assessment_title": assessment.title,
+                "total_marks": assessment.total_marks,
+                "marks_submitted": assessment.marks_submitted,
+                "students": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=True, methods=["post"], url_path="bulk-grade")
     def bulk_grade(self, request, pk=None):
@@ -113,7 +126,7 @@ class FacultyAssessmentViewSet(viewsets.ModelViewSet):
         if assessment.marks_submitted:
             return Response(
                 {"detail": "Assessment marks have already been finalized and locked."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = FacultyGradebookUpdateSerializer(data=request.data)
@@ -135,7 +148,7 @@ class FacultyAssessmentViewSet(viewsets.ModelViewSet):
                     defaults={
                         "obtained_marks": item.get("obtained_marks"),
                         "remarks": item.get("remarks", ""),
-                    }
+                    },
                 )
 
         return Response(
@@ -143,7 +156,7 @@ class FacultyAssessmentViewSet(viewsets.ModelViewSet):
                 "message": "Gradebook updated successfully.",
                 "marks_submitted": assessment.marks_submitted,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
 
@@ -151,9 +164,9 @@ class FacultyStudentAssessmentViewSet(viewsets.ModelViewSet):
     """
     Allows Faculty to view, add or edit marks for an individual student.
     """
+
     queryset = StudentAssessment.objects.select_related(
-        "assessment__course_offering__faculty_course",
-        "student"
+        "assessment__course_offering__faculty_course", "student"
     ).all()
     serializer_class = StudentAssessmentSerializer
     permission_classes = [IsFacultyUser]
@@ -175,6 +188,7 @@ class FacultyStudentAssessmentViewSet(viewsets.ModelViewSet):
 # 3. RESULT, SGPA, & CGPA APIS
 # ==============================================================================
 
+
 class StudentResultViewSet(viewsets.ViewSet):
     """
     View Student Term Results, SGPA (from StudentTermRecord) and Overall CGPA (from StudentProfile).
@@ -190,14 +204,20 @@ class StudentResultViewSet(viewsets.ViewSet):
             student_id = request.query_params.get("student_id")
             if not student_id:
                 return Response(
-                    {"detail": "student_id query parameter is required for Admin/Faculty."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {
+                        "detail": "student_id query parameter is required for Admin/Faculty."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             from apps.profiles.models import StudentProfile
+
             student_profile = StudentProfile.objects.filter(id=student_id).first()
 
         if not student_profile:
-            return Response({"detail": "Student profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Student profile not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         # Retrieve per-term SGPA and Standing records
         term_records = StudentTermRecord.objects.filter(
@@ -206,19 +226,24 @@ class StudentResultViewSet(viewsets.ViewSet):
 
         semesters_data = []
         for tr in term_records:
-            semesters_data.append({
-                "term_id": tr.term.id,
-                "term_name": tr.term.name,
-                "sgpa": tr.gpa,
-                "academic_standing": tr.academic_standing,
-                "status": tr.status
-            })
+            semesters_data.append(
+                {
+                    "term_id": tr.term.id,
+                    "term_name": tr.term.name,
+                    "sgpa": tr.gpa,
+                    "academic_standing": tr.academic_standing,
+                    "status": tr.status,
+                }
+            )
 
-        return Response({
-            "student_id": student_profile.id,
-            "overall_cgpa": getattr(student_profile, "cgpa", 0.0),
-            "term_records": semesters_data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "student_id": student_profile.id,
+                "overall_cgpa": getattr(student_profile, "cgpa", 0.0),
+                "term_records": semesters_data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["post"], url_path="calculate-term-result")
     def calculate_term(self, request):
@@ -232,15 +257,19 @@ class StudentResultViewSet(viewsets.ViewSet):
         if not student_id or not term_id:
             return Response(
                 {"detail": "student_id and term_id are required."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         from apps.profiles.models import StudentProfile
+
         student = StudentProfile.objects.filter(id=student_id).first()
         term = Term.objects.filter(id=term_id).first()
 
         if not student or not term:
-            return Response({"detail": "Student or Term not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Student or Term not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         summary = calculate_and_save_term_results(student, term)
         return Response(summary, status=status.HTTP_200_OK)

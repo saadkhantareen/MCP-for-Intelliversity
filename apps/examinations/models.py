@@ -1,5 +1,5 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 
 from apps.core.models import BaseModel
 
@@ -217,7 +217,6 @@ class StudentAssessment(BaseModel):
         return f"{self.student} - {self.assessment.title}"
 
 
-
 class GradePolicy(BaseModel):
     """
     Defines the grading policy for an academic term.
@@ -232,7 +231,6 @@ class GradePolicy(BaseModel):
     name = models.CharField(max_length=100)
 
     description = models.TextField(blank=True)
-
 
 
 class GradeScale(BaseModel):
