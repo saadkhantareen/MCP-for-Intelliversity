@@ -1,13 +1,14 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.exceptions import ValidationError
+
 from apps.academics.choices import (
     AcademicStanding,
+    BatchStatus,
     CourseType,
     DegreeLevel,
     StudentTermStatus,
     TermType,
-    BatchStatus,
 )
 from apps.core.models import BaseModel
 
