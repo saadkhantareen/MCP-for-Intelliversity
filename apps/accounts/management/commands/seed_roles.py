@@ -15,8 +15,9 @@ from apps.academics.models import (
     StudentTermRecord,
     Term,
 )
+
 # fetch the roles from the choices to make codebase consistent
-from apps.enrollments.models import CourseOffering, FacultyAssignment, Enrollment
+from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.finance.models import StudentFeeInvoice
 from apps.profiles.models import (
     AdminProfile,

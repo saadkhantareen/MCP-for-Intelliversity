@@ -60,4 +60,4 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     def is_student(self):
         return self.groups.filter(name=Role.STUDENT).exists()
 
-    #TODO: add more properties for other roles if needed in future.
+    # TODO: add more properties for other roles if needed in future.

@@ -12,7 +12,12 @@ from apps.enrollments.serializers import (
     FacultyAssignmentSerializer,
     GenerateCourseOfferingsSerializer,
 )
-from apps.profiles.permissions import IsAdminOrFaculty, IsAdminOrStudent, IsFaculty, IsStudent
+from apps.profiles.permissions import (
+    IsAdminOrFaculty,
+    IsAdminOrStudent,
+    IsFaculty,
+    IsStudent,
+)
 
 
 class CourseOfferingViewSet(ModelViewSet):

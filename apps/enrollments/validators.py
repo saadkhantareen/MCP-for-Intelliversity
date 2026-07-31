@@ -11,12 +11,9 @@ def validate_faculty(self, attrs):
     faculty = attrs.get("faculty")
 
     if request.user.is_admin and faculty is None:
-        raise serializers.ValidationError({
-            "faculty": "Faculty is required."
-        })
+        raise serializers.ValidationError({"faculty": "Faculty is required."})
 
     return attrs
-        
 
 
 def validate_faculty_credits(self, attrs):
@@ -65,7 +62,7 @@ def validate_course_offering(self, attrs):
 
     if existing_assignment:
         raise serializers.ValidationError(
-            f"This Course offering is already assigned to another faculty member."
+            "This Course offering is already assigned to another faculty member."
         )
 
 
@@ -81,7 +78,7 @@ def validate_assignment_period(self, attrs):
     term = course_offering.term
     if not term.is_faculty_assignment_open():
         raise serializers.ValidationError(
-            f"Cannot Assign Faculty before/after assignment period."
+            "Cannot Assign Faculty before/after assignment period."
         )
 
 
@@ -90,9 +87,7 @@ def validate_student(self, attrs):
     student = attrs.get("student")
 
     if request.user.is_admin and student is None:
-        raise serializers.ValidationError({
-            "student": "Student is required."
-        })
+        raise serializers.ValidationError({"student": "Student is required."})
 
     return attrs
 
@@ -109,7 +104,7 @@ def validate_registration_period(self, attrs):
     term = course_offering.term
     if not term.is_registration_open():
         raise serializers.ValidationError(
-            f"Cannot Enroll before/after registration period."
+            "Cannot Enroll before/after registration period."
         )
 
 

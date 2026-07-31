@@ -170,9 +170,7 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 # Lock the CourseOffering row to block concurrent claims
-                offering = CourseOffering.objects.select_for_update().get(
-                    pk=course_offering.pk
-                )
+                CourseOffering.objects.select_for_update().get(pk=course_offering.pk)
                 return super().create(validated_data)
         except Exception as e:
             raise serializers.ValidationError(
@@ -186,9 +184,7 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
         )
         try:
             with transaction.atomic():
-                offering = CourseOffering.objects.select_for_update().get(
-                    pk=course_offering.pk
-                )
+                CourseOffering.objects.select_for_update().get(pk=course_offering.pk)
                 return super().update(instance, validated_data)
         except Exception as e:
             raise serializers.ValidationError(
@@ -221,9 +217,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 # Lock the CourseOffering row to block concurrent claims
-                offering = CourseOffering.objects.select_for_update().get(
-                    pk=course_offering.pk
-                )
+                CourseOffering.objects.select_for_update().get(pk=course_offering.pk)
                 return super().create(validated_data)
         except Exception as e:
             raise serializers.ValidationError(
@@ -238,9 +232,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 # Lock the CourseOffering row to block concurrent claims
-                offering = CourseOffering.objects.select_for_update().get(
-                    pk=course_offering.pk
-                )
+                CourseOffering.objects.select_for_update().get(pk=course_offering.pk)
                 return super().update(instance, validated_data)
         except Exception as e:
             raise serializers.ValidationError(
