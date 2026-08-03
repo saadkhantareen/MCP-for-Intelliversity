@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("academics", "0006_alter_batch_name"),
-        ("profiles", "0001_initial"),
+        ("profiles", "0002_document_resource_type_alter_baseprofile_user"),
     ]
 
     operations = [

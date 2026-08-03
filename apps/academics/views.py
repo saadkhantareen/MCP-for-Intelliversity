@@ -1,14 +1,13 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from rest_framework import status
 
 from apps.academics.filters import RoleBasedBatchFilter
 from apps.academics.models import (
     AcademicYear,
-    Term,
     Batch,
     Course,
     Curriculum,
@@ -16,12 +15,12 @@ from apps.academics.models import (
     FacultyCourse,
     Program,
     Section,
+    Term,
 )
 from apps.academics.serializers import (
     AcademicYearActivateSerializer,
     AcademicYearSerializer,
-    TermActivateSerializer,
-    TermSerializer,
+    BatchAutoSectionSerializer,
     BatchSerializer,
     CourseSerializer,
     CurriculumDetailSerializer,
@@ -30,7 +29,8 @@ from apps.academics.serializers import (
     FacultyCourseSerializer,
     ProgramSerializer,
     SectionSerializer,
-    BatchAutoSectionSerializer,
+    TermActivateSerializer,
+    TermSerializer,
 )
 
 

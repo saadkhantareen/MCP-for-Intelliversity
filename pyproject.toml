@@ -9,6 +9,7 @@ dependencies = [
     "django>=6.0.2",
     "django-cors-headers>=4.9.0",
     "django-environ>=0.13.0",
+    "django-filter>=26.1",
     "django-health-check>=4.0.4",
     "djangorestframework>=3.16.1",
     "djangorestframework-simplejwt>=5.5.1",
@@ -17,6 +18,7 @@ dependencies = [
     "pillow>=12.1.1",
     "psycopg[binary]>=3.3.3",
     "requests>=2.32.5",
+    "weasyprint>=68.1",
     "whitenoise>=6.11.0",
 ]
 

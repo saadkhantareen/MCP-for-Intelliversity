@@ -1,9 +1,11 @@
 from rest_framework import filters
 
+
 class RoleBasedBatchFilter(filters.BaseFilterBackend):
     """
     Enforces object-level read permissions for Batches based on the user's role.
     """
+
     def filter_queryset(self, request, queryset, view):
         user = request.user
 
@@ -17,7 +19,9 @@ class RoleBasedBatchFilter(filters.BaseFilterBackend):
 
         # Student: See only the batch for their assigned section
         if "student" in user_groups:
-            if hasattr(user, "base_profile") and hasattr(user.base_profile, "student_profile"):
+            if hasattr(user, "base_profile") and hasattr(
+                user.base_profile, "student_profile"
+            ):
                 return queryset.filter(
                     sections__students=user.base_profile.student_profile
                 ).distinct()
@@ -25,7 +29,9 @@ class RoleBasedBatchFilter(filters.BaseFilterBackend):
 
         # Faculty: See batches containing sections they teach
         if "faculty" in user_groups:
-            if hasattr(user, "base_profile") and hasattr(user.base_profile, "faculty_profile"):
+            if hasattr(user, "base_profile") and hasattr(
+                user.base_profile, "faculty_profile"
+            ):
                 return queryset.filter(
                     sections__course_assignments__faculty=user.base_profile.faculty_profile
                 ).distinct()

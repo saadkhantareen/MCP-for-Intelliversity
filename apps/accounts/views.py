@@ -1,8 +1,10 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.choices import Role
 from apps.accounts.serializers import (
     LoginSerializer,
     PasswordResetConfirmSerializer,
@@ -17,9 +19,18 @@ class RegisterView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = RegisterSerializer
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+
+        requested_role = request.data.get("role")
+        if requested_role and requested_role != Role.ADMIN:
+            return Response(
+                {"detail": "Only admin role can be registered via this endpoint."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -35,9 +46,12 @@ class LoginView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data, context={"request": request})
+        serializer = self.serializer_class(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
 
         return Response(
@@ -52,9 +66,10 @@ class PasswordResetRequestView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
-        serializer = PasswordResetRequestSerializer(
+        serializer = self.serializer_class(
             data=request.data,
             context={"request": request},
         )
@@ -75,9 +90,10 @@ class PasswordResetConfirmView(APIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request, uidb64, token):
-        serializer = PasswordResetConfirmSerializer(
+        serializer = self.serializer_class(
             data=request.data,
             context={"uidb64": uidb64, "token": token},
         )

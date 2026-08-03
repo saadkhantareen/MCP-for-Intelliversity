@@ -9,7 +9,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.choices import Roles
+from apps.accounts.choices import Role
 from apps.accounts.validators import (
     validate_recaptcha,
     validate_strong_password,
@@ -29,7 +29,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     # Slug related field will return Group Object directly.
     role = serializers.SlugRelatedField(
         slug_field="name",
-        queryset=Group.objects.filter(name__in=Roles.values),
+        queryset=Group.objects.filter(name__in=Role.values),
         write_only=True,
     )
 
@@ -75,17 +75,14 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         # Validate recaptcha first
         recaptcha_token = attrs.pop("recaptcha_token", None)
-        
-        if not recaptcha_token:
-            raise serializers.ValidationError(
-                "reCAPTCHA token is required. Please complete the reCAPTCHA."
-            )
-        
+
         try:
             validate_recaptcha(recaptcha_token)
         except serializers.ValidationError as e:
             # Re-raise as non-field validation error
-            raise serializers.ValidationError(str(e.detail[0]) if e.detail else "reCAPTCHA verification failed.")
+            raise serializers.ValidationError(
+                str(e.detail[0]) if e.detail else "reCAPTCHA verification failed."
+            )
 
         request = self.context.get("request")
         user = authenticate(
@@ -107,14 +104,13 @@ class LoginSerializer(serializers.Serializer):
             )
 
         refresh = RefreshToken.for_user(user)
-        roles = list(user.groups.values_list("name", flat=True))
 
         return {
             "user": {
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "roles": roles,
+                "roles": user_roles,
             },
             "tokens": {
                 "refresh": str(refresh),

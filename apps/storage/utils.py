@@ -15,7 +15,9 @@ def build_folder_path(subdomain, portal_name, asset_category, access, is_global=
 
 
 def build_public_id(subdomain, portal_name, asset_category, access, is_global=False):
-    folder = build_folder_path(subdomain, portal_name, asset_category, access, is_global)
+    folder = build_folder_path(
+        subdomain, portal_name, asset_category, access, is_global
+    )
     return f"{folder}/{uuid.uuid4().hex}"
 
 

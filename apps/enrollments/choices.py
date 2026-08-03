@@ -1,12 +1,13 @@
 from django.db import models
 
+
 class AssignmentStatus(models.TextChoices):
     PENDING = "pending", "Pending"
-    ACCEPTED = "accepted", "Accepted"
+    APPROVED = "approved", "Approved"
     REJECTED = "rejected", "Rejected"
 
+
 class EnrollmentStatus(models.TextChoices):
-    PENDING = "pending", "Pending"
     ENROLLED = "enrolled", "Enrolled"
     DROPPED = "dropped", "Dropped"
     WITHDRAWN = "withdrawn", "Withdrawn"

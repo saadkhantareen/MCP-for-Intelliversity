@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("academics", "0006_alter_batch_name"),
-        ("profiles", "0002_remove_baseprofile_profile_picture_and_more"),
+        ("profiles", "0004_alter_studentprofile_cgpa"),
     ]
 
     operations = [
@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
             model_name="batch",
             name="admission_term",
             field=models.ForeignKey(
-                default="00000000-0000-0000-0000-000000000000",
+                default="old-record-no-key-linked",
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="admitted_batches",
                 to="academics.term",
@@ -88,25 +88,25 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="term",
             name="course_withdraw_deadline",
-            field=models.DateField(default="2026-08-16"),
+            field=models.DateField(default="16-08-2026"),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="term",
             name="faculty_course_assignment_end_date",
-            field=models.DateField(default="2026-08-15"),
+            field=models.DateField(default="15-08-2026"),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="term",
             name="faculty_course_assignment_start_date",
-            field=models.DateField(default="2026-08-11"),
+            field=models.DateField(default="11-08-2026"),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="term",
             name="fee_issue_date",
-            field=models.DateField(default="2026-08-18"),
+            field=models.DateField(default="18-08-2026"),
             preserve_default=False,
         ),
         migrations.AlterField(

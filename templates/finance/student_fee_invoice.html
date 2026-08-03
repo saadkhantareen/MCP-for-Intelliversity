@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Student Fee Invoice</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 14px; color: #222; }
+    .header { margin-bottom: 16px; }
+    .row { margin: 4px 0; }
+    .label { font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Student Fee Invoice</h2>
+    <div class="row"><span class="label">Invoice ID:</span> {{ invoice.id }}</div>
+    <div class="row"><span class="label">Status:</span> {{ invoice.payment_status }}</div>
+  </div>
+
+  <div class="row"><span class="label">Student:</span> {{ invoice.student }}</div>
+  <div class="row"><span class="label">Term:</span> {{ invoice.student_term_record.term.name }}</div>
+  <div class="row"><span class="label">Fee Type:</span> {{ invoice.fee_type }}</div>
+  <div class="row"><span class="label">Due Date:</span> {{ invoice.due_date }}</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Base Amount</td>
+        <td>{{ invoice.amount }}</td>
+      </tr>
+      <tr>
+        <td>Fine Amount</td>
+        <td>{{ invoice.fine_amount|default:"0.00" }}</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
