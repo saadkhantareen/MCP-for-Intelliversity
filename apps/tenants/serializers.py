@@ -9,6 +9,7 @@ class UniversityPortalBrandingSerializer(serializers.ModelSerializer):
     logo_dark_url = serializers.SerializerMethodField()
     favicon_url = serializers.SerializerMethodField()
     page_asset = serializers.SerializerMethodField()
+    theme_config = serializers.SerializerMethodField()
 
     university_name = serializers.CharField(
         source="university_portal.university.name", read_only=True
@@ -46,6 +47,44 @@ class UniversityPortalBrandingSerializer(serializers.ModelSerializer):
             return PageAssetSerializer(page_asset).data
 
         return None
+
+    def get_theme_config(self, obj) -> dict:
+        """Return a usable theme_config with sensible defaults so frontends
+        always receive the `colors` key expected by tenantUtils.applyThemeToCSS.
+        """
+        cfg = obj.theme_config or {}
+
+        # Ensure colors exist with sensible defaults
+        colors = cfg.get("colors") or {}
+        # provide minimal color palette if missing
+        default_colors = {
+            "primary": "#0057b8",
+            "accent": "#ffd400",
+            "background": "#ffffff",
+            "text": "#111827",
+        }
+
+        # merge with defaults
+        merged_colors = {**default_colors, **colors}
+
+        # typography defaults
+        typography = cfg.get("typography") or {}
+        typography_defaults = {"font_family": "Inter, system-ui, sans-serif", "heading_family": "Inter, system-ui, sans-serif"}
+        merged_typography = {**typography_defaults, **typography}
+
+        result = {
+            "colors": merged_colors,
+            "typography": merged_typography,
+            "border_radius_px": cfg.get("border_radius_px") or cfg.get("borderRadius") or 8,
+            "darkMode": cfg.get("darkMode", False),
+        }
+
+        # include any other keys unchanged
+        for k, v in cfg.items():
+            if k not in result:
+                result[k] = v
+
+        return result
 
 
 class PortalBrandingUpdateSerializer(serializers.ModelSerializer):
