@@ -325,6 +325,7 @@ class Section(BaseModel):
     )
 
 
+# TODO: this model is not used anywhere remove it whenever a separate available.
 class StudentTermRecord(BaseModel):
     """Model to track a student's academic progress in a specific term within their batch."""
 

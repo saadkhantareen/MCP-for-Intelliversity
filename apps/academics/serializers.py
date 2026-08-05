@@ -281,9 +281,15 @@ class BatchSerializer(serializers.ModelSerializer):
 
 
 class SectionSerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
     class Meta:
         model = Section
-        fields = ["id", "name", "total_seats"]
+        fields = ["id", "name", "batch"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["batch"] = instance.batch.name
+        return data
 
 
 class BatchAutoSectionSerializer(serializers.Serializer):
@@ -331,7 +337,6 @@ class BatchAutoSectionSerializer(serializers.Serializer):
                 section = Section.objects.create(
                     name=f"Section {section_names[i]}",
                     batch=batch,
-                    total_seats=max_per_section,
                 )
                 created_sections.append(section)
 
