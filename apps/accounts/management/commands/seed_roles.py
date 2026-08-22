@@ -149,7 +149,7 @@ class Command(BaseCommand):
                 with transaction.atomic(using=db_key):
                     self._seed_for_tenant(db_key)
                 self.stdout.write(
-                    self.style.SUCCESS(f"Roles configured for {university.name}.")
+                    self.style.SUCCESS(f"Role configured for {university.name}.")
                 )
             except Exception as e:
                 self.stdout.write(

@@ -77,7 +77,7 @@ class FacultyCourseViewSet(ModelViewSet):
 
 
 class CurriculumViewSet(ModelViewSet):
-    queryset = Curriculum.objects.all()
+    queryset = Curriculum.objects.select_related("program").prefetch_related("courses")
     permission_classes = [IsAuthenticated, DjangoModelPermissions]
 
     def get_serializer_class(self):

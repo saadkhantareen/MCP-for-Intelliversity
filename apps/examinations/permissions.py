@@ -1,6 +1,6 @@
 from rest_framework import permissions
 
-from apps.accounts.choices import Roles
+from apps.accounts.choices import Role
 
 
 class IsAdminUserOrReadOnly(permissions.BasePermission):
@@ -13,7 +13,7 @@ class IsAdminUserOrReadOnly(permissions.BasePermission):
 
         user_role = getattr(request.user, "role", None)
         return (
-            user_role == Roles.ADMIN
+            user_role == Role.ADMIN
             or request.user.is_staff
             or request.user.is_superuser
         )
@@ -26,7 +26,7 @@ class IsFacultyUser(permissions.BasePermission):
 
         user_role = getattr(request.user, "role", None)
         return (
-            user_role in [Roles.FACULTY, Roles.ADMIN]
+            user_role in [Role.FACULTY, Role.ADMIN]
             or request.user.is_staff
             or request.user.is_superuser
         )

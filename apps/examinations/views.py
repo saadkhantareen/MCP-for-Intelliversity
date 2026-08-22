@@ -4,8 +4,9 @@ from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.academics.models import CourseOffering, StudentTermRecord, Term
-from apps.accounts.models import Roles
+from apps.enrollments.models import CourseOffering
+from apps.academics.models import StudentTermRecord, Term
+from apps.accounts.models import Role
 from apps.examinations.models import (
     Assessment,
     AssessmentPolicy,
@@ -92,7 +93,7 @@ class FacultyAssessmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         # Filtering according to CourseOffering -> FacultyCourse relation
-        if getattr(user, "role", None) == Roles.FACULTY:
+        if getattr(user, "role", None) == Role.FACULTY:
             return queryset.filter(
                 course_offering__faculty_course__faculty=user.profile
             )
@@ -177,7 +178,7 @@ class FacultyStudentAssessmentViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
-        if getattr(user, "role", None) == Roles.FACULTY:
+        if getattr(user, "role", None) == Role.FACULTY:
             return queryset.filter(
                 assessment__course_offering__faculty_course__faculty=user.profile
             )
@@ -198,7 +199,7 @@ class StudentResultViewSet(viewsets.ViewSet):
         user = request.user
         student_profile = None
 
-        if getattr(user, "role", None) == Roles.STUDENT:
+        if getattr(user, "role", None) == Role.STUDENT:
             student_profile = getattr(user, "profile", None)
         else:
             student_id = request.query_params.get("student_id")

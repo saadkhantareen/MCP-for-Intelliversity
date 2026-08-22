@@ -102,7 +102,7 @@ class Program(BaseModel):
 
 class Course(BaseModel):
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20)
+    code = models.CharField(max_length=20, unique=True)
     department = models.ForeignKey(
         "Department", on_delete=models.CASCADE, related_name="courses"
     )
