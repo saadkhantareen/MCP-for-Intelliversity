@@ -72,6 +72,8 @@ class StudentProfile(BaseModel):
         "academics.Section",
         on_delete=models.PROTECT,
         related_name="students",
+        null=True,
+        blank=True
     )
     cgpa = models.DecimalField(_("CGPA"), max_digits=4, decimal_places=2, default=0.00)
 

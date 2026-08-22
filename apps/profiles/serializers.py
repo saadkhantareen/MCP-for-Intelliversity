@@ -81,7 +81,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
 
     section_name = serializers.CharField(source="section.name", read_only=True)
-    batch = serializers.CharField(source="section.batch.name", read_only=True)
+    batch_name = serializers.CharField(source="section.batch.name", read_only=True)
     program = serializers.CharField(source="section.batch.program.name", read_only=True)
     current_semester = serializers.SerializerMethodField()
 
@@ -90,11 +90,11 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "registration_id",
-            "section",
             "section_name",
             "cgpa",
             "base_profile",
             "batch",
+            "batch_name",
             "program",
             "current_semester",
         ]
