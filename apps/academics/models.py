@@ -88,8 +88,8 @@ class Program(BaseModel):
     total_fee = models.DecimalField(max_digits=10, decimal_places=2)
     total_credit_hours_required = models.PositiveIntegerField()
     number_of_semesters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    annual_intake_capacity = models.PositiveIntegerField(
-        help_text="Maximum number of students that can be admitted annually Allowed by HEC."
+    per_batch_capacity = models.PositiveIntegerField(
+        help_text="Maximum number of students that can be admitted in a Batch Allowed by HEC."
     )
 
     class Meta:
@@ -294,13 +294,12 @@ class Batch(BaseModel):
         choices=BatchStatus.choices,
         default=BatchStatus.ACTIVE,
     )
-    max_students = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     expected_current_semester = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
         default=1,
         help_text="Current semester number for the batch. Help admin and system to get the current semester of the batch. This will be used to determine which courses are offered to the students of this batch.",
     )
-    max_students_per_section = models.PositiveIntegerField(
+    per_section_capacity = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
         help_text="Maximum number of students allowed in a section for this batch. This will be used to determine how many sections are created for the batch.",
     )

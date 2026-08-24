@@ -90,53 +90,24 @@ def validate_program_curriculum_same(attrs, instance=None):
             )
 
 
-def validate_max_students_available_capacity(attrs, instance=None):
+def validate_per_section_capacity(attrs, instance=None):
+    """
+    validate the per section do not exceed the per batch capacity.
+    """
     program = attrs.get("program", getattr(instance, "program", None))
-    admission_term = attrs.get(
-        "admission_term", getattr(instance, "admission_term", None)
-    )
-    max_students = attrs.get("max_students", getattr(instance, "max_students", None))
-
-    if program and admission_term and max_students is not None:
-        academic_year = admission_term.academic_year
-
-        existing_batches = Batch.objects.filter(
-            program=program, admission_term__academic_year=academic_year
-        )
-
-        # If we are updating an existing batch, exclude it from the sum
-        if instance and instance.pk:
-            existing_batches = existing_batches.exclude(pk=instance.pk)
-
-        # Calculate the sum of max_students. Use 'or 0' in case there are no existing batches yet (Sum returns None)
-        allocated_capacity = (
-            existing_batches.aggregate(total=Sum("max_students"))["total"] or 0
-        )
-
-        remaining_capacity = program.annual_intake_capacity - allocated_capacity
-
-        if max_students > remaining_capacity:
-            raise serializers.ValidationError(
-                {
-                    "max_students": (
-                        f"Cannot allocate {max_students} students. The program '{program.code}' "
-                        f"has an annual capacity of {program.annual_intake_capacity}. "
-                        f"With other batches this year, only {remaining_capacity} seats remain."
-                    )
-                }
-            )
-
-
-def validate_max_students_per_section(attrs, instance=None):
-    max_students = attrs.get("max_students", getattr(instance, "max_students", None))
-    max_students_per_section = attrs.get(
-        "max_students_per_section", getattr(instance, "max_students_per_section", None)
+    per_section_capacity = attrs.get(
+        "per_section_capacity", getattr(instance, "per_section_capacity", None)
     )
 
-    if max_students is not None and max_students_per_section is not None:
-        if max_students_per_section > max_students:
-            raise serializers.ValidationError(
-                {
-                    "max_students_per_section": f"The maximum number of students per section ({max_students_per_section}) cannot exceed the total maximum number of students ({max_students})."
-                }
-            )
+    per_batch_capacity = program.per_batch_capacity if program else None
+
+    if (
+        per_section_capacity
+        and per_batch_capacity
+        and per_section_capacity > per_batch_capacity
+    ):
+        raise serializers.ValidationError(
+            {
+                "per_section_capacity": f"The per section capacity '{per_section_capacity}' exceeds the per batch capacity '{per_batch_capacity}' for the program '{program.code}'."
+            }
+        )

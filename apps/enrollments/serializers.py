@@ -91,8 +91,8 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
         for batch in batches:
             sections = list(batch.sections.all())
             capacity = (
-                batch.max_students_per_section
-            )  # Use the batch's max_students_per_section for each offering then admin can change it later if needed. This is to ensure that the offering has a capacity set initially.
+                batch.per_section_capacity
+            )  # Use the batch's per_section_capacity for each offering then admin can change it later if needed. This is to ensure that the offering has a capacity set initially.
 
             if not sections:
                 continue
