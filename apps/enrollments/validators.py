@@ -150,12 +150,12 @@ def validate_student_prerequisites(self, attrs):
     if not student or not course_offering:
         return
 
-    prerequisites = course_offering.curriculum_course.course.prerequisites.all()
+    prerequisites = course_offering.course.prerequisites.all()
 
     for prerequisite in prerequisites:
         if not Enrollment.objects.filter(
             student=student,
-            course_offering__curriculum_course=prerequisite,
+            course_offering__course=prerequisite,
             status="enrolled",
         ).exists():
             raise serializers.ValidationError(

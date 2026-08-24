@@ -143,7 +143,7 @@ class CoursePrerequisite(BaseModel):
 # TODO: think of strategy to add course offerings for each term and assign faculty to those offerings. This will help in tracking which courses are offered in which term and by which faculty member.
 class Curriculum(BaseModel):
     name = models.CharField(max_length=100)
-    program = models.ForeignKey("Program", on_delete=models.CASCADE)
+    program = models.ForeignKey("Program", on_delete=models.CASCADE, related_name="curriculums")
     total_credit_hours = models.PositiveSmallIntegerField()
     description = models.TextField(blank=True)
     # effective_from = models.DateField()
@@ -153,7 +153,7 @@ class CurriculumCourse(BaseModel):
     curriculum = models.ForeignKey(
         "Curriculum", on_delete=models.CASCADE, related_name="courses"
     )
-    course = models.ForeignKey("Course", on_delete=models.CASCADE)
+    course = models.ForeignKey("Course", on_delete=models.CASCADE, related_name="curriculum_courses")
     recommended_semester = models.PositiveIntegerField()
     course_type = models.CharField(
         max_length=4, choices=CourseType.choices, default=CourseType.CORE

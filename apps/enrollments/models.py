@@ -5,8 +5,15 @@ from apps.enrollments.choices import AssignmentStatus, EnrollmentStatus
 
 
 class CourseOffering(BaseModel):
-    curriculum_course = models.ForeignKey(
-        "academics.CurriculumCourse",
+    """
+    It is a kind of junction table, which connects a course, term, and section together. It represents a specific instance of a course being offered in a particular term and section.
+    It shows: Course offered in many Sections M:M Section have many courses offered. 
+    and course offered in many terms M:M a term has many courses offered.
+
+    For Example: PF is offered in Term 1, Section A and Section B. PF is offered in Term 2, Section C. So, there are 3 course offerings for PF.
+    """
+    course = models.ForeignKey(
+        "academics.Course",
         on_delete=models.CASCADE,
         related_name="course_offerings",
     )
@@ -16,20 +23,17 @@ class CourseOffering(BaseModel):
     section = models.ForeignKey(
         "academics.Section", on_delete=models.CASCADE, related_name="course_offerings"
     )
-    capacity = models.PositiveIntegerField(
-        help_text="Maximum number of students that can be registered for this course offering."
-    )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["curriculum_course", "term", "section"],
+                fields=["course", "term", "section"],
                 name="unique_course_offering",
             )
         ]
 
     def __str__(self):
-        return f"{self.curriculum_course.course.code} - {self.term.name}"
+        return f"{self.course.code} - {self.term.name}"
 
 
 # TODO: Create Policies for this model and other models and use JsonField where possible.

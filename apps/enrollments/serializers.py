@@ -1,8 +1,9 @@
 from django.db import transaction
+from django.db.models.functions import Now
 from rest_framework import serializers
 
 from apps.academics.choices import BatchStatus
-from apps.academics.models import Batch, CurriculumCourse, Section, Term
+from apps.academics.models import Batch, Course, Section, Term
 from apps.enrollments.choices import EnrollmentStatus
 from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.enrollments.validators import (
@@ -20,25 +21,60 @@ from apps.profiles.models import FacultyProfile, StudentProfile
 
 
 class CourseOfferingSerializer(serializers.ModelSerializer):
-    curriculum_course = serializers.PrimaryKeyRelatedField(
-        queryset=CurriculumCourse.objects.all()
+
+    # NOTE:
+    # queryset does the lookup. It tells DRF: "Take the ID 105 from the JSON, search this pool of data, and translate it into the Python object <Course: Databases>."
+    # source does the wiring. It tells DRF: "Now that you have that translated object, assign it to course_offering.course when saving the model."
+
+    course_id = serializers.PrimaryKeyRelatedField(
+        queryset=Course.objects.all(), source="course"
     )
-    term = serializers.PrimaryKeyRelatedField(queryset=Term.objects.all())
-    section = serializers.PrimaryKeyRelatedField(queryset=Section.objects.all())
+    term_id = serializers.PrimaryKeyRelatedField(
+        queryset=Term.objects.all(), source="term"
+    )
+    section_id = serializers.PrimaryKeyRelatedField(
+        queryset=Section.objects.all(), source="section"
+    )
+    faculty_id = serializers.PrimaryKeyRelatedField(
+        queryset=FacultyProfile.objects.all(), required=False, write_only=True
+    )
 
     class Meta:
         model = CourseOffering
-        fields = "__all__"
+        fields = ["id", "course_id", "term_id", "section_id", "faculty_id"]
+
+    @transaction.atomic
+    def create(self, validated_data):
+        faculty = validated_data.pop("faculty_id", None)
+        course_offering = super().create(validated_data)
+
+        if faculty:
+            FacultyAssignment.objects.create(
+                course_offering=course_offering, faculty=faculty
+            )
+
+        return course_offering
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        faculty = validated_data.pop("faculty_id", None)
+        course_offering = super().update(instance, validated_data)
+
+        if faculty:
+            FacultyAssignment.objects.update_or_create(
+                course_offering=course_offering, defaults={"faculty": faculty}
+            )
+
+        return course_offering
 
     def to_representation(self, instance):
         return {
             "id": instance.id,
             "course": {
-                "id": instance.curriculum_course.course.id,
-                "code": instance.curriculum_course.course.code,
-                "name": instance.curriculum_course.course.name,
+                "id": instance.course.id,
+                "code": instance.course.code,
+                "name": instance.course.name,
             },
-            "recommended_semester": instance.curriculum_course.recommended_semester,
             "term": {
                 "id": instance.term.id,
                 "name": instance.term.name,
@@ -52,6 +88,9 @@ class CourseOfferingSerializer(serializers.ModelSerializer):
                 "id": instance.section.id,
                 "name": instance.section.name,
             },
+            "faculty":{
+                "name": instance.faculty_assignments.first().faculty.base_profile.user.get_full_name() if instance.faculty_assignments.exists() else None,
+            }
         }
 
 
@@ -80,37 +119,27 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
     def create(self, validated_data):
         term = validated_data["term"]
 
-        batches = (
-            Batch.objects.select_related("curriculum")
-            .prefetch_related("sections")
-            .filter(status=BatchStatus.ACTIVE)
+        batches = Batch.objects.prefetch_related("sections").filter(
+            status=BatchStatus.ACTIVE
         )
 
         offerings_to_create = []
 
         for batch in batches:
             sections = list(batch.sections.all())
-            capacity = (
-                batch.per_section_capacity
-            )  # Use the batch's per_section_capacity for each offering then admin can change it later if needed. This is to ensure that the offering has a capacity set initially.
 
             if not sections:
                 continue
 
-            curriculum_courses = CurriculumCourse.objects.filter(
-                curriculum_id=batch.curriculum_id,
-                recommended_semester=batch.expected_current_semester,
+            courses = Course.objects.filter(
+                curriculum_courses__curriculum_id=batch.curriculum_id,
+                curriculum_courses__recommended_semester=batch.expected_current_semester,
             )
 
             for section in sections:
-                for cc in curriculum_courses:
+                for course in courses:
                     offerings_to_create.append(
-                        CourseOffering(
-                            curriculum_course=cc,
-                            term=term,
-                            section=section,
-                            capacity=capacity,
-                        )
+                        CourseOffering(course=course, term=term, section=section)
                     )
 
         # Create course offerings and enroll first semester students automatically.
@@ -133,7 +162,7 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
                         )
 
             if enrollments_to_create:
-                Enrollment.objects.bulk_create(
+                enrollments_created = Enrollment.objects.bulk_create(
                     enrollments_to_create, ignore_conflicts=True
                 )
 
@@ -141,7 +170,7 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
             "term": term,
             "total_attempted": len(offerings_to_create),
             "created_count": len(created_records),
-            "first_semester_enrollments": len(enrollments_to_create),
+            "first_semester_enrollments": len(enrollments_created),
         }
 
 

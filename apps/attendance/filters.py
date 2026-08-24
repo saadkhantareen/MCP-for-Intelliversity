@@ -37,8 +37,8 @@ PATH_TERM = "course_offering__term"
 PATH_SECTION = "course_offering__section"
 PATH_BATCH = "course_offering__section__batch"
 PATH_PROGRAM = "course_offering__section__batch__program"
-PATH_COURSE_CODE = "course_offering__curriculum_course__course__code"
-PATH_COURSE_NAME = "course_offering__curriculum_course__course__name"
+PATH_COURSE_CODE = "course_offering__course__code"
+PATH_COURSE_NAME = "course_offering__course__name"
 PATH_FACULTY = "faculty_assignment__faculty"
 
 

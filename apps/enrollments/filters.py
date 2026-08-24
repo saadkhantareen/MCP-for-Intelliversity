@@ -12,7 +12,7 @@ class CourseOfferingFilter(django_filters.FilterSet):
     term = django_filters.CharFilter(field_name="term__name", lookup_expr="icontains")
 
     course = django_filters.CharFilter(
-        field_name="curriculum_course__course__name",
+        field_name="course__name",
         lookup_expr="icontains",
     )
 
@@ -22,12 +22,12 @@ class CourseOfferingFilter(django_filters.FilterSet):
     )
 
     department = django_filters.CharFilter(
-        field_name="curriculum_course__course__program__department__name",
+        field_name="course__program__department__name",
         lookup_expr="icontains",
     )
 
     program = django_filters.CharFilter(
-        field_name="curriculum_course__course__program__name",
+        field_name="course__program__name",
         lookup_expr="icontains",
     )
 
