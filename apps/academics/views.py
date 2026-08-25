@@ -116,15 +116,23 @@ class TermViewSet(ModelViewSet):
     serializer_class = TermSerializer
     permission_classes = [DjangoModelPermissions]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        academic_year_id = self.request.query_params.get("academic_year")
+        if academic_year_id:
+            queryset = queryset.filter(academic_year_id=academic_year_id)
+
+        return queryset
+
     @action(detail=True, methods=["post"], serializer_class=TermActivateSerializer)
     def activate(self, request, pk=None):
         term = self.get_object()
+
         serializer = self.get_serializer(term, data={})
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        response_serializer = TermSerializer(term)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return Response(TermSerializer(term).data, status=status.HTTP_200_OK)
 
 
 class BatchViewSet(ModelViewSet):

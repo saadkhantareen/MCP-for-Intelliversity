@@ -202,9 +202,9 @@ class AcademicYearActivateSerializer(serializers.Serializer):
         validate_no_previous_active_year(self, attrs)
         return attrs
 
-    def save(self, instance):
+    def update(self, instance, validated_data):
         instance.is_active = True
-        instance.save()
+        instance.save(update_fields=["is_active"])
         return instance
 
 
@@ -236,9 +236,9 @@ class TermActivateSerializer(serializers.Serializer):
         validate_no_previous_active_term(self, attrs)
         return attrs
 
-    def save(self, instance):
+    def update(self, instance, validated_data):
         instance.is_active = True
-        instance.save()
+        instance.save(update_fields=["is_active"])
         return instance
 
 
@@ -274,6 +274,7 @@ class BatchSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["curriculum"] = instance.curriculum.name
         data["admission_term"] = instance.admission_term.name
+        data["capacity"] = instance.program.per_batch_capacity
         return data
 
 
