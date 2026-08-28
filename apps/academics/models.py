@@ -32,7 +32,9 @@ class AcademicPolicy(BaseModel):
         super().clean()
         if self.min_credits_per_term > self.max_credits_per_term:
             raise ValidationError(
-                {"min_credits_per_term": "Minimum credits cannot exceed maximum credits."}
+                {
+                    "min_credits_per_term": "Minimum credits cannot exceed maximum credits."
+                }
             )
 
     def save(self, *args, **kwargs):
@@ -42,7 +44,9 @@ class AcademicPolicy(BaseModel):
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        raise ValidationError("The singleton AcademicPolicy instance cannot be deleted.")
+        raise ValidationError(
+            "The singleton AcademicPolicy instance cannot be deleted."
+        )
 
     @classmethod
     def load(cls):
@@ -50,7 +54,7 @@ class AcademicPolicy(BaseModel):
         if not obj:
             raise cls.DoesNotExist("AcademicPolicy has not been initialized.")
         return obj
-    
+
 
 class Department(BaseModel):
     """
@@ -156,7 +160,9 @@ class CoursePrerequisite(BaseModel):
 # TODO: think of strategy to add course offerings for each term and assign faculty to those offerings. This will help in tracking which courses are offered in which term and by which faculty member.
 class Curriculum(BaseModel):
     name = models.CharField(max_length=100)
-    program = models.ForeignKey("Program", on_delete=models.CASCADE, related_name="curriculums")
+    program = models.ForeignKey(
+        "Program", on_delete=models.CASCADE, related_name="curriculums"
+    )
     total_credit_hours = models.PositiveSmallIntegerField()
     description = models.TextField(blank=True)
     # effective_from = models.DateField()
@@ -166,7 +172,9 @@ class CurriculumCourse(BaseModel):
     curriculum = models.ForeignKey(
         "Curriculum", on_delete=models.CASCADE, related_name="courses"
     )
-    course = models.ForeignKey("Course", on_delete=models.CASCADE, related_name="curriculum_courses")
+    course = models.ForeignKey(
+        "Course", on_delete=models.CASCADE, related_name="curriculum_courses"
+    )
     recommended_semester = models.PositiveIntegerField()
     course_type = models.CharField(
         max_length=4, choices=CourseType.choices, default=CourseType.CORE
@@ -337,11 +345,12 @@ class Section(BaseModel):
     )
 
 
-# TODO: this model is not used anywhere remove it whenever a separate available.
 class StudentTermRecord(BaseModel):
     """Model to track a student's academic progress in a specific term within their batch."""
 
-    student = models.ForeignKey("profiles.StudentProfile", on_delete=models.CASCADE)
+    student = models.ForeignKey(
+        "profiles.StudentProfile", on_delete=models.CASCADE, related_name="term_records"
+    )
     term = models.ForeignKey("Term", on_delete=models.CASCADE)
 
     status = models.CharField(
@@ -349,7 +358,7 @@ class StudentTermRecord(BaseModel):
         choices=StudentTermStatus.choices,
         default=StudentTermStatus.ENROLLED,
     )
-    gpa = models.FloatField(default=0.0)
+    sgpa = models.FloatField(default=0.0)
     academic_standing = models.CharField(
         max_length=30,
         choices=AcademicStanding.choices,

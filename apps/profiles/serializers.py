@@ -24,7 +24,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
         model = BaseProfile
         fields = [
             "user",
-            "profile_picture_public_id",  # read only — generated from public_id
+            "profile_picture_public_id",
             "father_name",
             "date_of_birth",
             "gender",
@@ -39,7 +39,6 @@ class BaseProfileSerializer(serializers.ModelSerializer):
             "bio",
             "profile_picture_url",
         ]
-
         extra_kwargs = {"profile_picture_public_id": {"write_only": True}}
 
     def get_profile_picture_url(self, obj) -> str | None:
@@ -64,16 +63,18 @@ class BaseProfileSerializer(serializers.ModelSerializer):
         return value
 
     @transaction.atomic
+    def create(self, validated_data):
+        user_data = validated_data.pop("user", {})
+        # Delegate User creation to RegisterSerializer
+        user = self.fields["user"].create(user_data)
+        return BaseProfile.objects.create(user=user, **validated_data)
+
+    @transaction.atomic
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", None)
-
         if user_data:
-            user_serializer = RegisterSerializer(
-                instance.user, data=user_data, partial=True
-            )
-            user_serializer.is_valid(raise_exception=True)
-            user_serializer.save()
-
+            # Delegate User update to RegisterSerializer
+            self.fields["user"].update(instance.user, user_data)
         return super().update(instance, validated_data)
 
 
@@ -103,10 +104,8 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         base_profile_data = validated_data.pop("base_profile")
-        user_data = base_profile_data.pop("user")
-        user = RegisterSerializer().create(user_data)
-
-        base_profile = BaseProfile.objects.create(user=user, **base_profile_data)
+        # Delegate BaseProfile (and User) creation
+        base_profile = self.fields["base_profile"].create(base_profile_data)
         return StudentProfile.objects.create(
             base_profile=base_profile, **validated_data
         )
@@ -115,19 +114,12 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", None)
         if base_profile_data:
-            base_profile_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
-            )
-            base_profile_serializer.is_valid(raise_exception=True)
-            base_profile_serializer.save()
-
+            # Delegate BaseProfile (and User) update
+            self.fields["base_profile"].update(instance.base_profile, base_profile_data)
         return super().update(instance, validated_data)
 
     def get_current_semester(self, obj) -> int:
-        # Calculate current semester based on the number of StudentTermRecords
-        return obj.studenttermrecord_set.count() + 1
+        return obj.term_records.count() + 1
 
 
 class FacultyProfileSerializer(serializers.ModelSerializer):
@@ -136,7 +128,6 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
         many=True,
         queryset=Course.objects.all(),
         slug_field="code",
-        write_only=True,
         required=False,
     )
     department_name = serializers.CharField(source="department.name", read_only=True)
@@ -158,40 +149,45 @@ class FacultyProfileSerializer(serializers.ModelSerializer):
             "courses",
         ]
         read_only_fields = ["id"]
-        kwargs = {"department": {"write_only": True}}
+        extra_kwargs = {"department": {"write_only": True}}
 
     @transaction.atomic
     def create(self, validated_data):
-        # courses = validated_data.pop("courses")
+        courses = validated_data.pop("courses", [])
         base_profile_data = validated_data.pop("base_profile")
-        user_data = base_profile_data.pop("user")
 
-        user = RegisterSerializer().create(user_data)
+        # Delegate BaseProfile (and User) creation
+        base_profile = self.fields["base_profile"].create(base_profile_data)
 
-        base_profile = BaseProfile.objects.create(user=user, **base_profile_data)
         faculty = FacultyProfile.objects.create(
             base_profile=base_profile, **validated_data
         )
 
-        # FacultyCourse.objects.bulk_create(
-        #     [FacultyCourse(faculty=faculty, course=course) for course in courses]
-        # )
+        if courses:
+            FacultyCourse.objects.bulk_create(
+                [FacultyCourse(faculty=faculty, course=course) for course in courses]
+            )
 
         return faculty
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        courses = validated_data.pop("courses", None)
         base_profile_data = validated_data.pop("base_profile", None)
-        if base_profile_data:
-            base_profile_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
-            )
-            base_profile_serializer.is_valid(raise_exception=True)
-            base_profile_serializer.save()
 
-        return super().update(instance, validated_data)
+        if base_profile_data:
+            # Delegate BaseProfile (and User) update
+            self.fields["base_profile"].update(instance.base_profile, base_profile_data)
+
+        faculty = super().update(instance, validated_data)
+
+        if courses is not None:
+            FacultyCourse.objects.filter(faculty=faculty).delete()
+            FacultyCourse.objects.bulk_create(
+                [FacultyCourse(faculty=faculty, course=course) for course in courses]
+            )
+
+        return faculty
 
 
 class AdminProfileSerializer(serializers.ModelSerializer):
@@ -211,24 +207,19 @@ class AdminProfileSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         base_profile_data = validated_data.pop("base_profile")
-        user_data = base_profile_data.pop("user")
 
-        user = RegisterSerializer().create(user_data)
+        # Delegate BaseProfile (and User) creation
+        base_profile = self.fields["base_profile"].create(base_profile_data)
 
-        base_profile = BaseProfile.objects.create(user=user, **base_profile_data)
         return AdminProfile.objects.create(base_profile=base_profile, **validated_data)
 
     @transaction.atomic
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", None)
+
         if base_profile_data:
-            base_profile_serializer = BaseProfileSerializer(
-                instance.base_profile,
-                data=base_profile_data,
-                partial=True,
-            )
-            base_profile_serializer.is_valid(raise_exception=True)
-            base_profile_serializer.save()
+            # Delegate BaseProfile (and User) update
+            self.fields["base_profile"].update(instance.base_profile, base_profile_data)
 
         return super().update(instance, validated_data)
 
