@@ -1,12 +1,13 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import action
-from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
+from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from apps.academics.filters import RoleBasedBatchFilter
 from apps.academics.models import (
+    AcademicPolicy,
     AcademicYear,
     Batch,
     Course,
@@ -18,6 +19,7 @@ from apps.academics.models import (
     Term,
 )
 from apps.academics.serializers import (
+    AcademicPolicySerializer,
     AcademicYearActivateSerializer,
     AcademicYearSerializer,
     BatchAutoSectionSerializer,
@@ -32,12 +34,28 @@ from apps.academics.serializers import (
     TermActivateSerializer,
     TermSerializer,
 )
+from apps.profiles.permissions import IsAdmin
+
+
+class AcademicPolicyView(generics.RetrieveUpdateAPIView):
+    serializer_class = AcademicPolicySerializer
+    permission_classes = [DjangoModelPermissions, IsAdmin]
+    queryset = AcademicPolicy.objects.all()
+
+    def get_object(self):
+        try:
+            return AcademicPolicy.load()
+        except AcademicPolicy.DoesNotExist:
+            return Response(
+                {"detail": "Academic Policy has not been initialized."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
 
 class DepartmentViewSet(ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
 
     @action(detail=False, methods=["get"], url_path="codes")
     def codes(self, request):
@@ -48,7 +66,7 @@ class DepartmentViewSet(ModelViewSet):
 class ProgramViewSet(ModelViewSet):
     queryset = Program.objects.all()
     serializer_class = ProgramSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
 
     @action(detail=False, methods=["get"], url_path="codes")
     def codes(self, request):
@@ -61,7 +79,7 @@ class CourseViewSet(ModelViewSet):
         "prerequisites"
     )
     serializer_class = CourseSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
 
     @action(detail=True, methods=["get"], url_path="prerequisites")
     def list_prerequisites(self, request, pk=None):
@@ -73,12 +91,12 @@ class CourseViewSet(ModelViewSet):
 class FacultyCourseViewSet(ModelViewSet):
     queryset = FacultyCourse.objects.select_related("faculty", "course")
     serializer_class = FacultyCourseSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
 
 
 class CurriculumViewSet(ModelViewSet):
     queryset = Curriculum.objects.select_related("program").prefetch_related("courses")
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
 
     def get_serializer_class(self):
         # Returns only curriculum instances for 'GET all'
@@ -91,7 +109,7 @@ class CurriculumViewSet(ModelViewSet):
 class AcademicYearViewSet(ModelViewSet):
     queryset = AcademicYear.objects.all()
     serializer_class = AcademicYearSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
 
     # detail=True means this action applies to a single instance (requires an ID in the URL)
     @extend_schema(request=None, responses={200: AcademicYearSerializer})
@@ -137,7 +155,7 @@ class TermViewSet(ModelViewSet):
 
 class BatchViewSet(ModelViewSet):
     serializer_class = BatchSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
     filter_backends = [RoleBasedBatchFilter]
 
     def get_queryset(self):
@@ -166,4 +184,12 @@ class BatchViewSet(ModelViewSet):
 class SectionViewSet(ModelViewSet):
     queryset = Section.objects.select_related("batch")
     serializer_class = SectionSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
+    permission_classes = [DjangoModelPermissions]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        batch_id = self.request.query_params.get("batch")
+        if batch_id:
+            queryset = queryset.filter(batch_id=batch_id)
+
+        return queryset

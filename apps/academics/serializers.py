@@ -5,6 +5,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.academics.models import (
+    AcademicPolicy,
     AcademicYear,
     Batch,
     Course,
@@ -18,6 +19,7 @@ from apps.academics.models import (
 )
 from apps.academics.utils.utils import set_prerequisites
 from apps.academics.validators import (
+    validate_min_credits_lte_max_credits,
     validate_already_active,
     validate_curriculum_courses,
     validate_per_section_capacity,
@@ -28,6 +30,21 @@ from apps.academics.validators import (
     validate_start_lte_end,
 )
 from apps.profiles.models import FacultyProfile, StudentProfile
+
+
+class AcademicPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AcademicPolicy
+        fields = [
+            "id",
+            "min_credits_per_term",
+            "max_credits_per_term",
+        ]
+        read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        validate_min_credits_lte_max_credits(self, attrs)
+        return attrs
 
 
 class DepartmentSerializer(serializers.ModelSerializer):

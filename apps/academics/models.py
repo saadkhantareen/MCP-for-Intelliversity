@@ -17,27 +17,40 @@ from apps.core.models import BaseModel
 # TODO: use this to make some features dynamic.
 class AcademicPolicy(BaseModel):
     """
-    Singleton model to store academic Policy for the university. This model is designed to have only one instance, which can be accessed and modified as needed.
-    This is initialized on the University(tenant) setup.
+    Singleton model to store academic Policy for the university.
+    Initialized during University (tenant) setup.
     """
 
     max_credits_per_term = models.PositiveIntegerField(default=21)
     min_credits_per_term = models.PositiveIntegerField(default=12)
 
-    # attendance_percentage_required = models.PositiveSmallIntegerField(default=75) can be in Attendance policy model if we have one.
-
     class Meta:
         verbose_name = "Academic Policy"
+        verbose_name_plural = "Academic Policy"
+
+    def clean(self):
+        super().clean()
+        if self.min_credits_per_term > self.max_credits_per_term:
+            raise ValidationError(
+                {"min_credits_per_term": "Minimum credits cannot exceed maximum credits."}
+            )
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         if not self.pk and AcademicPolicy.objects.exists():
             raise ValidationError("Only one AcademicPolicy instance is allowed.")
         return super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        raise ValidationError("The singleton AcademicPolicy instance cannot be deleted.")
+
     @classmethod
     def load(cls):
-        return cls.objects.get()
-
+        obj = cls.objects.first()
+        if not obj:
+            raise cls.DoesNotExist("AcademicPolicy has not been initialized.")
+        return obj
+    
 
 class Department(BaseModel):
     """

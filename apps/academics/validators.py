@@ -4,6 +4,25 @@ from rest_framework import serializers
 from apps.academics.models import AcademicYear, Batch, Term
 
 
+def validate_min_credits_lte_max_credits(self, attrs):
+    min_credits = attrs.get(
+        "min_credits_per_term",
+        getattr(self.instance, "min_credits_per_term", None),
+    )
+    max_credits = attrs.get(
+        "max_credits_per_term",
+        getattr(self.instance, "max_credits_per_term", None),
+    )
+
+    if min_credits is not None and max_credits is not None:
+        if min_credits > max_credits:
+            raise serializers.ValidationError(
+                {
+                    "min_credits_per_term": "Minimum credits cannot exceed maximum credits."
+                }
+            )
+
+
 def validate_prerequisites(self, attrs):
     prereqs = attrs.get("prerequisites")
     if not prereqs:

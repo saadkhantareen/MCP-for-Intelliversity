@@ -1,6 +1,8 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from apps.academics.views import (
+    AcademicPolicyView,
     AcademicYearViewSet,
     BatchViewSet,
     CourseViewSet,
@@ -23,6 +25,8 @@ router.register(r"batches", BatchViewSet, basename="batch")
 router.register(r"sections", SectionViewSet, basename="section")
 router.register(r"faculty-courses", FacultyCourseViewSet, basename="faculty-course")
 
-urlpatterns = []
+urlpatterns = [
+    path("academic-policy/", AcademicPolicyView.as_view(), name="academic-policy"),
+]
 
 urlpatterns += router.urls
