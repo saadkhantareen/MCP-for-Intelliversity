@@ -10,10 +10,10 @@ from apps.enrollments.validators import (
     validate_assignment_period,
     validate_course_offering,
     validate_course_offering_capacity,
-    validate_faculty,
+    validate_and_assign_faculty,
     validate_faculty_credits,
     validate_registration_period,
-    validate_student,
+    validate_and_assign_student,
     validate_student_credits,
     validate_student_prerequisites,
 )
@@ -41,7 +41,7 @@ class CourseOfferingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CourseOffering
-        fields = ["id", "course_id", "term_id", "section_id", "faculty_id"]
+        fields = ["id", "course_id", "term_id", "section_id", "faculty_id", "capacity"]
 
     @transaction.atomic
     def create(self, validated_data):
@@ -75,6 +75,7 @@ class CourseOfferingSerializer(serializers.ModelSerializer):
                 "code": instance.course.code,
                 "name": instance.course.name,
             },
+            "capacity": instance.capacity,
             "term": {
                 "id": instance.term.id,
                 "name": instance.term.name,
@@ -88,9 +89,13 @@ class CourseOfferingSerializer(serializers.ModelSerializer):
                 "id": instance.section.id,
                 "name": instance.section.name,
             },
-            "faculty":{
-                "name": instance.faculty_assignments.first().faculty.base_profile.user.get_full_name() if instance.faculty_assignments.exists() else None,
-            }
+            "faculty": {
+                "name": (
+                    instance.faculty_assignments.first().faculty.base_profile.user.get_full_name
+                    if instance.faculty_assignments.exists()
+                    else None
+                ),
+            },
         }
 
 
@@ -136,10 +141,17 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
                 curriculum_courses__recommended_semester=batch.expected_current_semester,
             )
 
+            capacity = batch.per_section_capacity
+
             for section in sections:
                 for course in courses:
                     offerings_to_create.append(
-                        CourseOffering(course=course, term=term, section=section)
+                        CourseOffering(
+                            course=course,
+                            term=term,
+                            section=section,
+                            capacity=capacity,
+                        )
                     )
 
         # Create course offerings and enroll first semester students automatically.
@@ -160,7 +172,7 @@ class GenerateCourseOfferingsSerializer(serializers.Serializer):
                                 status=EnrollmentStatus.ENROLLED,
                             )
                         )
-
+            enrollments_created = []
             if enrollments_to_create:
                 enrollments_created = Enrollment.objects.bulk_create(
                     enrollments_to_create, ignore_conflicts=True
@@ -178,16 +190,16 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
     course_offering = serializers.PrimaryKeyRelatedField(
         queryset=CourseOffering.objects.all()
     )
-    faculty = serializers.PrimaryKeyRelatedField(
-        queryset=FacultyProfile.objects.all(), required=False
+    faculty_id = serializers.PrimaryKeyRelatedField(
+        queryset=FacultyProfile.objects.all(),
+        source="faculty",
     )
 
     class Meta:
         model = FacultyAssignment
-        fields = ["id", "course_offering", "faculty", "status"]
+        fields = ["id", "course_offering", "faculty_id", "status"]
 
     def validate(self, attrs):
-        validate_faculty(self, attrs)
         validate_faculty_credits(self, attrs)
         validate_course_offering(self, attrs)
         validate_assignment_period(self, attrs)
@@ -220,19 +232,37 @@ class FacultyAssignmentSerializer(serializers.ModelSerializer):
                 f"Failed to update faculty assignment for course offering {course_offering}. It might be already assigned. Error: {str(e)}"
             )
 
+    def to_representation(self, instance):
+        return {
+            "id": instance.id,
+            "course_offering_id": instance.course_offering.id,
+            "course_name": instance.course_offering.course.name,
+            "term_name": instance.course_offering.term.name,
+            "batch_name": instance.course_offering.section.batch.name,
+            "section_name": instance.course_offering.section.name,
+            "faculty_id": instance.faculty.id if instance.faculty else None,
+            "faculty_name": (
+                instance.faculty.base_profile.user.get_full_name
+                if instance.faculty
+                else None
+            ),
+            "status": instance.status,
+        }
+
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     course_offering = serializers.PrimaryKeyRelatedField(
         queryset=CourseOffering.objects.all()
     )
-    student = serializers.PrimaryKeyRelatedField(queryset=StudentProfile.objects.all())
+    student_id = serializers.PrimaryKeyRelatedField(
+        queryset=StudentProfile.objects.all(), source="student"
+    )
 
     class Meta:
         model = Enrollment
-        fields = ["id", "course_offering", "student", "status"]
+        fields = ["id", "course_offering", "student_id", "status"]
 
     def validate(self, attrs):
-        validate_student(self, attrs)
         validate_registration_period(self, attrs)
         validate_student_credits(self, attrs)
         validate_student_prerequisites(self, attrs)
@@ -267,3 +297,21 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f"Failed to update enrollment for student in course offering {course_offering}. It might be already enrolled. Error: {str(e)}"
             )
+
+    def to_representation(self, instance):
+        return {
+            "id": instance.id,
+            "course_offering_id": instance.course_offering.id,
+            "course_name": instance.course_offering.course.name,
+            "term_name": instance.course_offering.term.name,
+            "batch_name": instance.course_offering.section.batch.name,
+            "section_name": instance.course_offering.section.name,
+            "faculty_name": (
+                instance.course_offering.faculty_assignments.first().faculty.base_profile.user.get_full_name
+                if instance.course_offering.faculty_assignments.exists()
+                else None
+            ),
+            "student_id": instance.student.id,
+            "student_name": instance.student.base_profile.user.get_full_name,
+            "status": instance.status,
+        }

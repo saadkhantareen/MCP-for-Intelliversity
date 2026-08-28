@@ -6,7 +6,7 @@ from apps.enrollments.views import CourseOfferingViewSet, FacultyAssignmentViewS
 router = DefaultRouter()
 router.register(r"course-offerings", CourseOfferingViewSet, basename="course-offering")
 router.register(r"faculty-assignments", FacultyAssignmentViewSet, basename="faculty-assignment")
-router.register(r"enrollments", EnrollmentViewSet, basename="enrollment")
+router.register(r"student-enrollments", EnrollmentViewSet, basename="student-enrollment")
 
 urlpatterns = [
     path("", include(router.urls)),

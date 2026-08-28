@@ -23,6 +23,9 @@ class CourseOffering(BaseModel):
     section = models.ForeignKey(
         "academics.Section", on_delete=models.CASCADE, related_name="course_offerings"
     )
+    capacity = models.PositiveIntegerField(
+        default=30,
+    )
 
     class Meta:
         constraints = [

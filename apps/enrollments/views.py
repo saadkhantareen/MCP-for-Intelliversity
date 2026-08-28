@@ -61,16 +61,13 @@ class CourseOfferingViewSet(ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        queryset = (
-            CourseOffering.objects.select_related(
-                "course",
-                "term",
-                "section__batch",
-            )
-            .filter(
-                course__available_faculty__faculty=faculty_profile,
-                faculty_assignments__isnull=True,
-            )
+        queryset = CourseOffering.objects.select_related(
+            "course",
+            "term",
+            "section__batch",
+        ).filter(
+            # course__available_faculty__faculty=faculty_profile,
+            faculty_assignments__isnull=True,
         )
 
         serializer = self.get_serializer(queryset, many=True)
@@ -97,16 +94,23 @@ class CourseOfferingViewSet(ModelViewSet):
             # return empty offerings for first semester students as they will be enrolled automatically.
             return Response([], status=status.HTTP_200_OK)
 
-        base_queryset = CourseOffering.objects.select_related(
-            "course",
-            "term",
-            "section__batch",
-        ).filter(
-            section__batch=student_profile.batch,
-            course__recommended_semester=current_semester,
-        ).exclude(
-            enrollments__student=student_profile,
-            enrollments__status__in=[EnrollmentStatus.ENROLLED, EnrollmentStatus.COMPLETED],
+        base_queryset = (
+            CourseOffering.objects.select_related(
+                "course",
+                "term",
+                "section__batch",
+            )
+            .filter(
+                section__batch=student_profile.batch,
+                course__curriculum_courses__recommended_semester=current_semester,
+            )
+            .exclude(
+                enrollments__student=student_profile,
+                enrollments__status__in=[
+                    EnrollmentStatus.ENROLLED,
+                    EnrollmentStatus.COMPLETED,
+                ],
+            )
         )
 
         # TODO: add failed course logic here when we have a way to track failed courses from examinations module.
@@ -134,7 +138,6 @@ class CourseOfferingViewSet(ModelViewSet):
 
 
 class FacultyAssignmentViewSet(ModelViewSet):
-
     serializer_class = FacultyAssignmentSerializer
     permission_classes = [DjangoModelPermissions, IsAdminOrFaculty]
 
@@ -155,6 +158,20 @@ class FacultyAssignmentViewSet(ModelViewSet):
             return queryset.filter(faculty__base_profile__user=user)
 
         return queryset.none()
+
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs.setdefault("context", self.get_serializer_context())
+
+        if self.action in ["create", "update", "partial_update"]:
+            user = self.request.user
+            if getattr(user, "is_faculty", False):
+                # Copy request.data (since QueryDict / dict might be immutable)
+                data = kwargs.get("data", self.request.data).copy()
+                data["faculty_id"] = user.base_profile.faculty_profile.pk
+                kwargs["data"] = data
+
+        return serializer_class(*args, **kwargs)
 
 
 class EnrollmentViewSet(ModelViewSet):
@@ -179,3 +196,17 @@ class EnrollmentViewSet(ModelViewSet):
             return queryset.filter(student__base_profile__user=user)
 
         return queryset.none()
+
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs.setdefault("context", self.get_serializer_context())
+
+        if self.action in ["create", "update", "partial_update"]:
+            user = self.request.user
+            if getattr(user, "is_student", False):
+                # Copy request.data (since QueryDict / dict might be immutable)
+                data = kwargs.get("data", self.request.data).copy()
+                data["student_id"] = user.base_profile.student_profile.pk
+                kwargs["data"] = data
+
+        return serializer_class(*args, **kwargs)

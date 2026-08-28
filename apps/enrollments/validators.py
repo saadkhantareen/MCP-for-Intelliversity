@@ -6,12 +6,15 @@ from apps.enrollments.choices import AssignmentStatus
 from apps.enrollments.models import Enrollment, FacultyAssignment
 
 
-def validate_faculty(self, attrs):
+def validate_and_assign_faculty(self, attrs):
     request = self.context.get("request")
     faculty = attrs.get("faculty")
 
-    if request.user.is_admin and faculty is None:
-        raise serializers.ValidationError({"faculty": "Faculty is required."})
+    if request.user.is_faculty:
+        self.instance.faculty = request.user.base_profile.faculty_profile
+    else:
+        if faculty is None:
+            raise serializers.ValidationError({"faculty": "Faculty is required."})
 
     return attrs
 
@@ -35,8 +38,10 @@ def validate_faculty_credits(self, attrs):
         )
         .aggregate(total=models.Sum("course_offering__course__credit_hours"))
         .get("total", 0)
-    )
+    ) or 0
 
+    if not course_offering.course:
+        return
     # Add the credits of the new course offering
     total_credits += course_offering.course.credit_hours
 
@@ -76,18 +81,21 @@ def validate_assignment_period(self, attrs):
         return
 
     term = course_offering.term
-    if not term.is_faculty_assignment_open():
+    if not term.is_faculty_assignment_open:
         raise serializers.ValidationError(
             "Cannot Assign Faculty before/after assignment period."
         )
 
 
-def validate_student(self, attrs):
+def validate_and_assign_student(self, attrs):
     request = self.context.get("request")
     student = attrs.get("student")
 
-    if request.user.is_admin and student is None:
-        raise serializers.ValidationError({"student": "Student is required."})
+    if request.user.is_student:
+        attrs["student"] = request.user.base_profile.student_profile
+    else:
+        if student is None:
+            raise serializers.ValidationError({"student": "Student is required."})
 
     return attrs
 
@@ -102,7 +110,7 @@ def validate_registration_period(self, attrs):
         return
 
     term = course_offering.term
-    if not term.is_registration_open():
+    if not term.is_registration_open:
         raise serializers.ValidationError(
             "Cannot Enroll before/after registration period."
         )
@@ -127,7 +135,7 @@ def validate_student_credits(self, attrs):  # from academics policy
         )
         .aggregate(total=models.Sum("course_offering__course__credit_hours"))
         .get("total", 0)
-    )
+    ) or 0
 
     # Add the credits of the new course offering
     total_credits += course_offering.course.credit_hours
