@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.views import APIView
 
 from apps.enrollments.choices import EnrollmentStatus
 from apps.enrollments.filters import CourseOfferingFilter
@@ -213,13 +214,12 @@ class EnrollmentViewSet(ModelViewSet):
 
         return serializer_class(*args, **kwargs)
 
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="students",
-        serializer_class=EnrolledStudentSerializer,
-    )
-    def students(self, request):
+
+class EnrolledStudentAPIView(APIView):
+    serializer_class = EnrolledStudentSerializer
+    permission_classes = [DjangoModelPermissions, IsAdminOrFaculty]
+
+    def get(self, request, *args, **kwargs):
         course_offering_id = request.query_params.get("course_offering_id")
 
         if not course_offering_id:
@@ -234,4 +234,4 @@ class EnrollmentViewSet(ModelViewSet):
 
         serializer = self.get_serializer(students, many=True)
 
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
