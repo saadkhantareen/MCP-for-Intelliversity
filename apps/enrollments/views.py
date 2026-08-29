@@ -218,6 +218,13 @@ class EnrollmentViewSet(ModelViewSet):
 class EnrolledStudentAPIView(APIView):
     serializer_class = EnrolledStudentSerializer
     permission_classes = [DjangoModelPermissions, IsAdminOrFaculty]
+    queryset = StudentProfile.objects.select_related(
+        "base_profile__user",
+        "section__batch",
+    ).prefetch_related(
+        "enrollments__course_offering__course",
+        "enrollments__course_offering__term",
+    )
 
     def get(self, request, *args, **kwargs):
         course_offering_id = request.query_params.get("course_offering_id")
@@ -232,6 +239,6 @@ class EnrolledStudentAPIView(APIView):
             enrollments__course_offering_id=course_offering_id
         ).distinct()
 
-        serializer = self.get_serializer(students, many=True)
+        serializer = self.serializer_class(students, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
