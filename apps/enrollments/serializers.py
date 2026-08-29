@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.db.models.functions import Now
 from rest_framework import serializers
 
 from apps.academics.choices import BatchStatus
@@ -10,10 +9,8 @@ from apps.enrollments.validators import (
     validate_assignment_period,
     validate_course_offering,
     validate_course_offering_capacity,
-    validate_and_assign_faculty,
     validate_faculty_credits,
     validate_registration_period,
-    validate_and_assign_student,
     validate_student_credits,
     validate_student_prerequisites,
 )
@@ -315,3 +312,21 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             "student_name": instance.student.base_profile.user.get_full_name,
             "status": instance.status,
         }
+
+
+class EnrolledStudentSerializer(serializers.ModelSerializer):
+    batch_name = serializers.CharField(source="section.batch.name", read_only=True)
+    section_name = serializers.CharField(source="section.name", read_only=True)
+    name = serializers.CharField(
+        source="base_profile.user.get_full_name", read_only=True
+    )
+
+    class Meta:
+        model = StudentProfile
+        fields = [
+            "id",
+            "registration_id",
+            "name",
+            "batch_name",
+            "section_name",
+        ]

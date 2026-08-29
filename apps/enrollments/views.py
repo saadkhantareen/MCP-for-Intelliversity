@@ -12,7 +12,9 @@ from apps.enrollments.serializers import (
     EnrollmentSerializer,
     FacultyAssignmentSerializer,
     GenerateCourseOfferingsSerializer,
+    EnrolledStudentSerializer,
 )
+from apps.profiles.models import StudentProfile
 from apps.profiles.permissions import (
     IsAdminOrFaculty,
     IsAdminOrStudent,
@@ -210,3 +212,26 @@ class EnrollmentViewSet(ModelViewSet):
                 kwargs["data"] = data
 
         return serializer_class(*args, **kwargs)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="students",
+        serializer_class=EnrolledStudentSerializer,
+    )
+    def students(self, request):
+        course_offering_id = request.query_params.get("course_offering_id")
+
+        if not course_offering_id:
+            return Response(
+                {"detail": "course_offering_id query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        students = StudentProfile.objects.filter(
+            enrollments__course_offering_id=course_offering_id
+        ).distinct()
+
+        serializer = self.get_serializer(students, many=True)
+
+        return Response(serializer.data)
