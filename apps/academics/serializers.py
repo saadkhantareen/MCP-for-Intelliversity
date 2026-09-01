@@ -236,9 +236,9 @@ class TermSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Swap the ID out for the name
         if instance.academic_year:
-            representation["academic_year"] = instance.academic_year.name
+            representation["academic_year"] = str(instance.academic_year_id)
+            representation["academic_year_name"] = instance.academic_year.name
         return representation
 
     class Meta:
