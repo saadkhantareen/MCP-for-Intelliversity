@@ -112,6 +112,7 @@ def ensure_session_markable(session, policy, *, is_admin=False):
 # ---------------------------------------------------------------------------
 def generate_sessions(*, course_offering, weekdays, start_time, end_time,
                       date_from, date_to, session_type=choices.SessionType.LECTURE,
+                      delivery_mode=choices.DeliveryMode.ONSITE,
                       room="", skip_dates=None, faculty_assignment=None):
     if date_to < date_from:
         raise ValidationError({"date_to": "date_to must not be before date_from."})
@@ -147,6 +148,7 @@ def generate_sessions(*, course_offering, weekdays, start_time, end_time,
                         start_time=start_time,
                         end_time=end_time,
                         session_type=session_type,
+                        delivery_mode=delivery_mode,
                         room=room,
                         status=choices.SessionStatus.SCHEDULED,
                     ))
@@ -432,7 +434,7 @@ def summary_for_student(student, term):
             course_offering__term=term,
             status__in=ACTIVE_ENROLLMENT_STATUSES,
         )
-        .select_related("course_offering__term")
+        .select_related("course_offering__course", "course_offering__term", "course_offering__section")
         .annotate(
             present=Count("attendance_records",
                           filter=Q(attendance_records__status=PRESENT,
@@ -468,6 +470,11 @@ def summary_for_student(student, term):
             "enrollment_id": str(enr.pk),
             "course_offering_id": str(offering.pk),
             "course": str(offering),
+            "course_code": offering.course.code,
+            "course_name": offering.course.name,
+            "term_name": offering.term.name,
+            "section_name": offering.section.name,
+            "display_name": f"{offering.course.code} — {offering.course.name} ({offering.term.name} · Sec {offering.section.name})",
             "min_percentage": policy.min_percentage,
             **stats,
         })
