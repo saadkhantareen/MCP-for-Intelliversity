@@ -149,6 +149,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             ClassSession.objects
             .select_related(
                 "course_offering",
+                "course_offering__course",
                 "course_offering__term",
                 "course_offering__section",
                 "faculty_assignment",
