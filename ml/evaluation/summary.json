@@ -1,0 +1,521 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-10-30T15:46:34.890847+00:00",
+  "run": {
+    "script": "ml/train.py",
+    "mode": "full",
+    "wall_clock_seconds": 299.8,
+    "random_state": 42,
+    "test_size": 0.2,
+    "cv_folds": 5,
+    "shipped_model_refit": "all_rows",
+    "reported_holdout_model": "training_split_refit",
+    "zoo": [
+      "Ridge",
+      "ElasticNet",
+      "KNN",
+      "RandomForest",
+      "ExtraTrees",
+      "GradientBoosting",
+      "HistGradientBoosting"
+    ]
+  },
+  "semesters": {
+    "1": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8927494440845363,
+        "mae": 0.14135921802249848
+      },
+      "holdout": {
+        "mae": 0.1420434884057446,
+        "rmse": 0.17729680966587388,
+        "r2": 0.8927953563585855
+      },
+      "residual_std": 0.1762580599825644,
+      "interval_90": 0.29100734035215237,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 2000
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 2000
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": 0.0,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.0,
+        "mae_before": 0.1420434884057446,
+        "mae_after": 0.14199
+      },
+      "coverage": {
+        "before": 0.901,
+        "after": 0.9045,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09353485,
+        "brier_score": 0.028950143635
+      }
+    },
+    "2": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8927350557461436,
+        "mae": 0.14135127876965622
+      },
+      "holdout": {
+        "mae": 0.14201689530957962,
+        "rmse": 0.17724026540805124,
+        "r2": 0.8928637257826326
+      },
+      "residual_std": 0.17626987468309557,
+      "interval_90": 0.2907400849058364,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.296815,
+          "rmse": 0.36707989593547613,
+          "r2": 0.5404498040014245,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.296815,
+          "rmse": 0.36707989593547613,
+          "r2": 0.5404498040014245,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": -2.6593096164984065e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.0185,
+        "mae_before": 0.14201689530957962,
+        "mae_after": 0.14228
+      },
+      "coverage": {
+        "before": 0.9,
+        "after": 0.9025,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.0935401,
+        "brier_score": 0.028898408759999997
+      }
+    },
+    "3": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8926617990159812,
+        "mae": 0.14140185729025462
+      },
+      "holdout": {
+        "mae": 0.14202950468586917,
+        "rmse": 0.17722097886961172,
+        "r2": 0.8928870407493964
+      },
+      "residual_std": 0.1763300558880189,
+      "interval_90": 0.29045937924974136,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.453425,
+          "rmse": 0.5159400643485637,
+          "r2": 0.0921580168101318,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.21140999999999996,
+          "rmse": 0.26395468361065316,
+          "r2": 0.762386834042171,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": -1.3983719875432232e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.177,
+        "mae_before": 0.14202950468586917,
+        "mae_after": 0.15002500000000002
+      },
+      "coverage": {
+        "before": 0.9,
+        "after": 0.885,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09359129999999999,
+        "brier_score": 0.028907192870000004
+      }
+    },
+    "4": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8925985404750697,
+        "mae": 0.1414608730332486
+      },
+      "holdout": {
+        "mae": 0.14206405473472808,
+        "rmse": 0.17726296062086716,
+        "r2": 0.8928362869135827
+      },
+      "residual_std": 0.17638201733983622,
+      "interval_90": 0.29053913038389445,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.617675,
+          "rmse": 0.6721201901445901,
+          "r2": -0.540655855920191,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.301795,
+          "rmse": 0.3587225405673738,
+          "r2": 0.5611368770062217,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": 2.0566328983478988e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.437,
+        "mae_before": 0.14206405473472808,
+        "mae_after": 0.17729000000000003
+      },
+      "coverage": {
+        "before": 0.899,
+        "after": 0.816,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09396209999999999,
+        "brier_score": 0.02888695686
+      }
+    },
+    "5": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8925504123492142,
+        "mae": 0.1414723941702095
+      },
+      "holdout": {
+        "mae": 0.1420066331199128,
+        "rmse": 0.17723149920701056,
+        "r2": 0.892874323316898
+      },
+      "residual_std": 0.1764215312903127,
+      "interval_90": 0.29025982520510624,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.69386,
+          "rmse": 0.7455949973008135,
+          "r2": -0.8959100407535165,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.38952125,
+          "rmse": 0.44258719832932364,
+          "r2": 0.3319492563490595,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": -3.6855285831804974e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.5625,
+        "mae_before": 0.1420066331199128,
+        "mae_after": 0.216055
+      },
+      "coverage": {
+        "before": 0.8995,
+        "after": 0.7175,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09381415,
+        "brier_score": 0.028893987795
+      }
+    },
+    "6": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8925810182862014,
+        "mae": 0.14144454874844595
+      },
+      "holdout": {
+        "mae": 0.14196537059817696,
+        "rmse": 0.17721091317543175,
+        "r2": 0.8928992078830943
+      },
+      "residual_std": 0.17639640083157182,
+      "interval_90": 0.2901607876669903,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.751345,
+          "rmse": 0.8007640414004615,
+          "r2": -1.186859498524126,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.45931399999999994,
+          "rmse": 0.5082859195374193,
+          "r2": 0.11889449620881054,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": -7.811780756764031e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.6195,
+        "mae_before": 0.14196537059817696,
+        "mae_after": 0.256625
+      },
+      "coverage": {
+        "before": 0.898,
+        "after": 0.622,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09363135,
+        "brier_score": 0.028854974445
+      }
+    },
+    "7": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8926108056490889,
+        "mae": 0.14142564349545128
+      },
+      "holdout": {
+        "mae": 0.14200384886567324,
+        "rmse": 0.17721270098677355,
+        "r2": 0.8928970468764916
+      },
+      "residual_std": 0.17637193553687294,
+      "interval_90": 0.2904765868291457,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.7969950000000001,
+          "rmse": 0.8445255768773376,
+          "r2": -1.4324133017405516,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.5146475,
+          "rmse": 0.5606992868532809,
+          "r2": -0.07219002695711763,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": -3.963954007135673e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.6655,
+        "mae_before": 0.14200384886567324,
+        "mae_after": 0.29439499999999996
+      },
+      "coverage": {
+        "before": 0.8995,
+        "after": 0.5405,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09340185,
+        "brier_score": 0.028883293124999997
+      }
+    },
+    "8": {
+      "model": "Ridge",
+      "n_rows": 10000,
+      "n_train_rows": 8000,
+      "n_test_rows": 2000,
+      "cv": {
+        "r2": 0.8926454236087112,
+        "mae": 0.14142314007679505
+      },
+      "holdout": {
+        "mae": 0.14209001005455593,
+        "rmse": 0.17733999551340218,
+        "r2": 0.8927431243161034
+      },
+      "residual_std": 0.17634349439139616,
+      "interval_90": 0.29042166751700177,
+      "baselines": {
+        "mean": {
+          "mae": 0.43933196249999995,
+          "rmse": 0.5415684254147854,
+          "r2": -0.00027272795340649303,
+          "fallback_rows": 0
+        },
+        "admission_only_linear": {
+          "mae": 0.1420434884057446,
+          "rmse": 0.17729680966587388,
+          "r2": 0.8927953563585855,
+          "fallback_rows": 0
+        },
+        "last_sgpa": {
+          "mae": 0.8350299999999999,
+          "rmse": 0.8815422281433828,
+          "r2": -1.650318070844028,
+          "fallback_rows": 0
+        },
+        "current_cgpa_persistence": {
+          "mae": 0.5601107142857142,
+          "rmse": 0.604232571962492,
+          "r2": -0.24514526507453538,
+          "fallback_rows": 0
+        }
+      },
+      "ablation_delta_mae_all_minus_admission": 4.6521648811331806e-05,
+      "best_baseline": "admission_only_linear",
+      "guardrail": {
+        "fire_rate": 0.6935,
+        "mae_before": 0.14209001005455593,
+        "mae_after": 0.32841499999999996
+      },
+      "coverage": {
+        "before": 0.8985,
+        "after": 0.4815,
+        "target": 0.9
+      },
+      "at_risk": {
+        "threshold": 2.0,
+        "observed_positive_rate": 0.096,
+        "observed_positive_count": 192,
+        "predicted_prob_mean": 0.09329625,
+        "brier_score": 0.028903222705000002
+      }
+    }
+  }
+}
