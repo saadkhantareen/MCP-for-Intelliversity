@@ -7,6 +7,7 @@ from apps.academics.models import Course, FacultyCourse, Section
 from apps.accounts.serializers import RegisterSerializer
 from apps.profiles.models import (
     AdminProfile,
+    AdmissionRecord,
     BaseProfile,
     Document,
     FacultyProfile,
@@ -78,8 +79,61 @@ class BaseProfileSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class AdmissionRecordSerializer(serializers.ModelSerializer):
+    """Pre-university marks: the admission-side inputs of the CGPA model.
+
+    Marks are stored as obtained/total rather than a bare number because
+    boards and entry tests use different maximums; percentages are derived
+    here for display and for the feature builder.
+    """
+
+    matric_percentage = serializers.SerializerMethodField()
+    fsc_percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AdmissionRecord
+        fields = [
+            "matric_obtained",
+            "matric_total",
+            "fsc_obtained",
+            "fsc_total",
+            "entry_test_score",
+            "matric_percentage",
+            "fsc_percentage",
+        ]
+
+    @staticmethod
+    def _percentage(obtained, total):
+        if obtained is None or not total:
+            return None
+        return round(float(obtained) / float(total) * 100, 2)
+
+    def get_matric_percentage(self, obj) -> float | None:
+        return self._percentage(obj.matric_obtained, obj.matric_total)
+
+    def get_fsc_percentage(self, obj) -> float | None:
+        return self._percentage(obj.fsc_obtained, obj.fsc_total)
+
+    def validate(self, attrs):
+        for field in ("matric", "fsc"):
+            obtained = attrs.get(f"{field}_obtained")
+            total = attrs.get(
+                f"{field}_total", getattr(self.instance, f"{field}_total", None)
+            )
+            if total is not None and total <= 0:
+                raise serializers.ValidationError(
+                    {f"{field}_total": "Total marks must be greater than zero."}
+                )
+            if obtained is not None and total and obtained > total:
+                raise serializers.ValidationError(
+                    {f"{field}_obtained": f"Cannot exceed the total ({total})."}
+                )
+        return attrs
+
+
 class StudentProfileSerializer(serializers.ModelSerializer):
     base_profile = BaseProfileSerializer()
+    admission = AdmissionRecordSerializer(required=False, allow_null=True)
 
     section_name = serializers.CharField(source="section.name", read_only=True)
     batch_name = serializers.CharField(source="section.batch.name", read_only=True)
@@ -94,6 +148,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "section_name",
             "cgpa",
             "base_profile",
+            "admission",
             "batch",
             "batch_name",
             "program",
@@ -101,25 +156,42 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "cgpa"]
 
+    @staticmethod
+    def _save_admission(student, data):
+        """Create or update the one-to-one admission record, if any was sent."""
+        if not data:
+            return
+        AdmissionRecord.objects.update_or_create(student=student, defaults=data)
+
     @transaction.atomic
     def create(self, validated_data):
         base_profile_data = validated_data.pop("base_profile")
+        admission_data = validated_data.pop("admission", None)
         # Delegate BaseProfile (and User) creation
         base_profile = self.fields["base_profile"].create(base_profile_data)
-        return StudentProfile.objects.create(
+        student = StudentProfile.objects.create(
             base_profile=base_profile, **validated_data
         )
+        self._save_admission(student, admission_data)
+        return student
 
     @transaction.atomic
     def update(self, instance, validated_data):
         base_profile_data = validated_data.pop("base_profile", None)
+        admission_data = validated_data.pop("admission", None)
         if base_profile_data:
             # Delegate BaseProfile (and User) update
             self.fields["base_profile"].update(instance.base_profile, base_profile_data)
-        return super().update(instance, validated_data)
+        student = super().update(instance, validated_data)
+        self._save_admission(student, admission_data)
+        return student
 
     def get_current_semester(self, obj) -> int:
-        return obj.term_records.count() + 1
+        # Count only *completed* semesters (a term in progress has sgpa 0), so
+        # the number shown here agrees with the semester model the predictor
+        # selects in apps.predictions.services.resolve_semester.
+        completed = sum(1 for r in obj.term_records.all() if r.sgpa and r.sgpa > 0)
+        return min(completed + 1, 8)
 
 
 class FacultyProfileSerializer(serializers.ModelSerializer):
