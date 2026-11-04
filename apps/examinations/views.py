@@ -270,7 +270,7 @@ class StudentResultViewSet(viewsets.ViewSet):
                 {
                     "term_id": tr.term.id,
                     "term_name": tr.term.name,
-                    "sgpa": tr.gpa,
+                    "sgpa": tr.sgpa,
                     "academic_standing": tr.academic_standing,
                     "status": tr.status,
                 }
