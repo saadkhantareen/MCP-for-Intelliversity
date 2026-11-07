@@ -5,6 +5,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.academics.models import (
+    AcademicPolicy,
     AcademicYear,
     Batch,
     Course,
@@ -18,10 +19,10 @@ from apps.academics.models import (
 )
 from apps.academics.utils.utils import set_prerequisites
 from apps.academics.validators import (
+    validate_min_credits_lte_max_credits,
     validate_already_active,
     validate_curriculum_courses,
-    validate_max_students_available_capacity,
-    validate_max_students_per_section,
+    validate_per_section_capacity,
     validate_no_previous_active_term,
     validate_no_previous_active_year,
     validate_prerequisites,
@@ -29,6 +30,21 @@ from apps.academics.validators import (
     validate_start_lte_end,
 )
 from apps.profiles.models import FacultyProfile, StudentProfile
+
+
+class AcademicPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AcademicPolicy
+        fields = [
+            "id",
+            "min_credits_per_term",
+            "max_credits_per_term",
+        ]
+        read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        validate_min_credits_lte_max_credits(self, attrs)
+        return attrs
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -203,9 +219,9 @@ class AcademicYearActivateSerializer(serializers.Serializer):
         validate_no_previous_active_year(self, attrs)
         return attrs
 
-    def save(self, instance):
+    def update(self, instance, validated_data):
         instance.is_active = True
-        instance.save()
+        instance.save(update_fields=["is_active"])
         return instance
 
 
@@ -220,9 +236,9 @@ class TermSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Swap the ID out for the name
         if instance.academic_year:
-            representation["academic_year"] = instance.academic_year.name
+            representation["academic_year"] = str(instance.academic_year_id)
+            representation["academic_year_name"] = instance.academic_year.name
         return representation
 
     class Meta:
@@ -237,9 +253,9 @@ class TermActivateSerializer(serializers.Serializer):
         validate_no_previous_active_term(self, attrs)
         return attrs
 
-    def save(self, instance):
+    def update(self, instance, validated_data):
         instance.is_active = True
-        instance.save()
+        instance.save(update_fields=["is_active"])
         return instance
 
 
@@ -260,16 +276,14 @@ class BatchSerializer(serializers.ModelSerializer):
             "curriculum",
             "admission_term",
             "status",
-            "max_students",
             "expected_current_semester",
-            "max_students_per_section",
+            "per_section_capacity",
         ]
         read_only_fields = ["status", "expected_current_semester"]
 
     def validate(self, attrs):
         validate_program_curriculum_same(attrs, self.instance)
-        validate_max_students_available_capacity(attrs, self.instance)
-        validate_max_students_per_section(attrs, self.instance)
+        validate_per_section_capacity(attrs, self.instance)
 
         return attrs
 
@@ -277,13 +291,21 @@ class BatchSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["curriculum"] = instance.curriculum.name
         data["admission_term"] = instance.admission_term.name
+        data["capacity"] = instance.program.per_batch_capacity
         return data
 
 
 class SectionSerializer(serializers.ModelSerializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+
     class Meta:
         model = Section
-        fields = ["id", "name", "total_seats"]
+        fields = ["id", "name", "batch"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["batch"] = instance.batch.name
+        return data
 
 
 class BatchAutoSectionSerializer(serializers.Serializer):
@@ -316,7 +338,7 @@ class BatchAutoSectionSerializer(serializers.Serializer):
                 )
 
             # Calculate required number of sections based on batch capacity
-            max_per_section = batch.max_students_per_section
+            max_per_section = batch.per_section_capacity
             num_sections = math.ceil(total_students / max_per_section)
 
             section_names = string.ascii_uppercase
@@ -329,9 +351,8 @@ class BatchAutoSectionSerializer(serializers.Serializer):
             created_sections = []
             for i in range(num_sections):
                 section = Section.objects.create(
-                    name=f"Section {section_names[i]}",
+                    name=f"{section_names[i]}",
                     batch=batch,
-                    total_seats=max_per_section,
                 )
                 created_sections.append(section)
 
@@ -371,9 +392,5 @@ class BatchAutoSectionSerializer(serializers.Serializer):
     def to_representation(self, instance):
         return {
             "message": "Sections created and students distributed successfully.",
-            "data": {
-                "total_students": instance["total_students"],
-                "sections_created": instance["sections_created"],
-                "students_per_section": instance["students_per_section"],
-            },
+            "data": instance,
         }

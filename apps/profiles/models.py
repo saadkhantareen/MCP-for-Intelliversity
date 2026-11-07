@@ -72,6 +72,8 @@ class StudentProfile(BaseModel):
         "academics.Section",
         on_delete=models.PROTECT,
         related_name="students",
+        null=True,
+        blank=True
     )
     cgpa = models.DecimalField(_("CGPA"), max_digits=4, decimal_places=2, default=0.00)
 
@@ -199,3 +201,42 @@ class Document(BaseModel):
 
     def __str__(self):
         return f"{self.base_profile.user.email} - {self.document_type}"
+
+
+class AdmissionRecord(BaseModel):
+    """Pre-university academic record, the model's admission-side inputs.
+
+    Stored as obtained/total rather than a bare mark: boards and tests use
+    different maximums, so "950" is not comparable across students. The total
+    stored here is authoritative at serving time; the defaults match
+    ``apps.predictions.feature_engineering.DEFAULT_MATRIC_TOTAL`` /
+    ``DEFAULT_FSC_TOTAL`` so the seed path and the serving path cannot drift.
+
+    ``is_demo`` marks rows written by ``seed_admissions --demo``. They exist to
+    make the demo tenant look populated and must never be counted as evidence
+    about the models.
+    """
+
+    student = models.OneToOneField(
+        StudentProfile,
+        on_delete=models.CASCADE,
+        related_name="admission",
+    )
+    matric_obtained = models.PositiveIntegerField(null=True, blank=True)
+    matric_total = models.PositiveIntegerField(default=1150)
+    fsc_obtained = models.PositiveIntegerField(null=True, blank=True)
+    fsc_total = models.PositiveIntegerField(default=1100)
+    entry_test_score = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    is_demo = models.BooleanField(
+        default=False,
+        help_text="Synthetic mark written for demonstration; excluded from validation.",
+    )
+
+    class Meta:
+        verbose_name = _("admission record")
+        verbose_name_plural = _("admission records")
+
+    def __str__(self):
+        return f"Admission — {self.student}"

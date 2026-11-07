@@ -17,26 +17,43 @@ from apps.core.models import BaseModel
 # TODO: use this to make some features dynamic.
 class AcademicPolicy(BaseModel):
     """
-    Singleton model to store academic Policy for the university. This model is designed to have only one instance, which can be accessed and modified as needed.
-    This is initialized on the University(tenant) setup.
+    Singleton model to store academic Policy for the university.
+    Initialized during University (tenant) setup.
     """
 
     max_credits_per_term = models.PositiveIntegerField(default=21)
     min_credits_per_term = models.PositiveIntegerField(default=12)
 
-    # attendance_percentage_required = models.PositiveSmallIntegerField(default=75) can be in Attendance policy model if we have one.
-
     class Meta:
         verbose_name = "Academic Policy"
+        verbose_name_plural = "Academic Policy"
+
+    def clean(self):
+        super().clean()
+        if self.min_credits_per_term > self.max_credits_per_term:
+            raise ValidationError(
+                {
+                    "min_credits_per_term": "Minimum credits cannot exceed maximum credits."
+                }
+            )
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         if not self.pk and AcademicPolicy.objects.exists():
             raise ValidationError("Only one AcademicPolicy instance is allowed.")
         return super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "The singleton AcademicPolicy instance cannot be deleted."
+        )
+
     @classmethod
     def load(cls):
-        return cls.objects.get()
+        obj = cls.objects.first()
+        if not obj:
+            obj = cls.objects.create(max_credits_per_term=21, min_credits_per_term=12)
+        return obj
 
 
 class Department(BaseModel):
@@ -88,8 +105,8 @@ class Program(BaseModel):
     total_fee = models.DecimalField(max_digits=10, decimal_places=2)
     total_credit_hours_required = models.PositiveIntegerField()
     number_of_semesters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    annual_intake_capacity = models.PositiveIntegerField(
-        help_text="Maximum number of students that can be admitted annually Allowed by HEC."
+    per_batch_capacity = models.PositiveIntegerField(
+        help_text="Maximum number of students that can be admitted in a Batch Allowed by HEC."
     )
 
     class Meta:
@@ -102,7 +119,7 @@ class Program(BaseModel):
 
 class Course(BaseModel):
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20)
+    code = models.CharField(max_length=20, unique=True)
     department = models.ForeignKey(
         "Department", on_delete=models.CASCADE, related_name="courses"
     )
@@ -143,7 +160,9 @@ class CoursePrerequisite(BaseModel):
 # TODO: think of strategy to add course offerings for each term and assign faculty to those offerings. This will help in tracking which courses are offered in which term and by which faculty member.
 class Curriculum(BaseModel):
     name = models.CharField(max_length=100)
-    program = models.ForeignKey("Program", on_delete=models.CASCADE)
+    program = models.ForeignKey(
+        "Program", on_delete=models.CASCADE, related_name="curriculums"
+    )
     total_credit_hours = models.PositiveSmallIntegerField()
     description = models.TextField(blank=True)
     # effective_from = models.DateField()
@@ -153,7 +172,9 @@ class CurriculumCourse(BaseModel):
     curriculum = models.ForeignKey(
         "Curriculum", on_delete=models.CASCADE, related_name="courses"
     )
-    course = models.ForeignKey("Course", on_delete=models.CASCADE)
+    course = models.ForeignKey(
+        "Course", on_delete=models.CASCADE, related_name="curriculum_courses"
+    )
     recommended_semester = models.PositiveIntegerField()
     course_type = models.CharField(
         max_length=4, choices=CourseType.choices, default=CourseType.CORE
@@ -294,13 +315,12 @@ class Batch(BaseModel):
         choices=BatchStatus.choices,
         default=BatchStatus.ACTIVE,
     )
-    max_students = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     expected_current_semester = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
         default=1,
         help_text="Current semester number for the batch. Help admin and system to get the current semester of the batch. This will be used to determine which courses are offered to the students of this batch.",
     )
-    max_students_per_section = models.PositiveIntegerField(
+    per_section_capacity = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
         help_text="Maximum number of students allowed in a section for this batch. This will be used to determine how many sections are created for the batch.",
     )
@@ -328,7 +348,9 @@ class Section(BaseModel):
 class StudentTermRecord(BaseModel):
     """Model to track a student's academic progress in a specific term within their batch."""
 
-    student = models.ForeignKey("profiles.StudentProfile", on_delete=models.CASCADE)
+    student = models.ForeignKey(
+        "profiles.StudentProfile", on_delete=models.CASCADE, related_name="term_records"
+    )
     term = models.ForeignKey("Term", on_delete=models.CASCADE)
 
     status = models.CharField(
@@ -336,7 +358,7 @@ class StudentTermRecord(BaseModel):
         choices=StudentTermStatus.choices,
         default=StudentTermStatus.ENROLLED,
     )
-    gpa = models.FloatField(default=0.0)
+    sgpa = models.FloatField(default=0.0)
     academic_standing = models.CharField(
         max_length=30,
         choices=AcademicStanding.choices,

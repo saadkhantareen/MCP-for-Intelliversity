@@ -1,0 +1,287 @@
+{
+  "generated_at": "2026-10-30T15:46:34.890847+00:00",
+  "model": "selected model per semester, refit on the training split only",
+  "residual_source": "out-of-fold predictions from 5-fold CV on the training split; the hold-out split is never used for any statistic in this file",
+  "semesters": {
+    "1": {
+      "semester": 1,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -3.236366075803665e-05,
+      "residual_std_ddof1": 0.1762580599825644,
+      "skewness": 0.007251151708577687,
+      "excess_kurtosis": -0.11110830657507442,
+      "abs_residual_quantiles": {
+        "0.5": 0.1207258001036966,
+        "0.8": 0.22512465375644655,
+        "0.9": 0.29100734035215237,
+        "0.95": 0.34516845180398537
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.2892723446221204,
+        "0.25": -0.12136030072217185,
+        "0.5": -0.00010380245062657778,
+        "0.75": 0.12004085913473883,
+        "0.95": 0.291708220646921
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.003994671240391755,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": null,
+        "column": null,
+        "n_rows": 0,
+        "note": "None for semester 1: no semester has been completed, so there is no last SGPA."
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "2": {
+      "semester": 2,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -6.20987748504207e-05,
+      "residual_std_ddof1": 0.17626987468309557,
+      "skewness": 0.0069544668077920115,
+      "excess_kurtosis": -0.1109552868220649,
+      "abs_residual_quantiles": {
+        "0.5": 0.12056896748288892,
+        "0.8": 0.22532256368423867,
+        "0.9": 0.2907400849058364,
+        "0.95": 0.3445729510336658
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.28889008799592736,
+        "0.25": -0.12129893329370389,
+        "0.5": -4.461791013898875e-05,
+        "0.75": 0.12012541188415371,
+        "0.95": 0.2912110566274855
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.004010253795287527,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": 1.1717482751317708e-06,
+        "column": "Sem1_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "3": {
+      "semester": 3,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -6.321482810935586e-05,
+      "residual_std_ddof1": 0.1763300558880189,
+      "skewness": 0.008063447914956263,
+      "excess_kurtosis": -0.11040142198819902,
+      "abs_residual_quantiles": {
+        "0.5": 0.12065074746440929,
+        "0.8": 0.22573329015394564,
+        "0.9": 0.29045937924974136,
+        "0.95": 0.3445592907348817
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.28908059923076485,
+        "0.25": -0.12122115027306257,
+        "0.5": 0.0002859173544152993,
+        "0.75": 0.12020613286444837,
+        "0.95": 0.2917662893837409
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.0034343353428772506,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": -9.088342889658444e-05,
+        "column": "Sem2_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "4": {
+      "semester": 4,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -2.1263648119927314e-05,
+      "residual_std_ddof1": 0.17638201733983622,
+      "skewness": 0.0070092804036869264,
+      "excess_kurtosis": -0.11093865659285251,
+      "abs_residual_quantiles": {
+        "0.5": 0.12039959625971752,
+        "0.8": 0.22525869430665885,
+        "0.9": 0.29053913038389445,
+        "0.95": 0.34450756853287456
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.2898603916390772,
+        "0.25": -0.12067533419115306,
+        "0.5": -0.000141265884394004,
+        "0.75": 0.12005203097716743,
+        "0.95": 0.2910514293905524
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.0038489859080277295,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": -0.0002551892496626335,
+        "column": "Sem3_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "5": {
+      "semester": 5,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -3.001853137364008e-05,
+      "residual_std_ddof1": 0.1764215312903127,
+      "skewness": 0.0069891059043316805,
+      "excess_kurtosis": -0.1083461008051132,
+      "abs_residual_quantiles": {
+        "0.5": 0.12077621539961148,
+        "0.8": 0.22566395793532548,
+        "0.9": 0.29025982520510624,
+        "0.95": 0.34424726566672
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.2894251689239076,
+        "0.25": -0.12133753177400297,
+        "0.5": -8.465278975156032e-05,
+        "0.75": 0.1203876307851044,
+        "0.95": 0.29078729620174953
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.0036902985251878874,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": -3.123801269098982e-05,
+        "column": "Sem4_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "6": {
+      "semester": 6,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -4.312217174886324e-05,
+      "residual_std_ddof1": 0.17639640083157182,
+      "skewness": 0.008029887300962452,
+      "excess_kurtosis": -0.11068471743507402,
+      "abs_residual_quantiles": {
+        "0.5": 0.12027854429044549,
+        "0.8": 0.22592469235037416,
+        "0.9": 0.2901607876669903,
+        "0.95": 0.34444985816634216
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.2889065497135399,
+        "0.25": -0.12114843853536161,
+        "0.5": 2.7100558500414706e-05,
+        "0.75": 0.1191647581803148,
+        "0.95": 0.29226847138005496
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.0035896838318519,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": -0.00012265774518373842,
+        "column": "Sem5_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "7": {
+      "semester": 7,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -6.353097922171913e-05,
+      "residual_std_ddof1": 0.17637193553687294,
+      "skewness": 0.008610366347965633,
+      "excess_kurtosis": -0.10980810788928341,
+      "abs_residual_quantiles": {
+        "0.5": 0.1204413464719285,
+        "0.8": 0.2257651812318146,
+        "0.9": 0.2904765868291457,
+        "0.95": 0.34406652061741366
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.28869179669783357,
+        "0.25": -0.12080028298850609,
+        "0.5": 0.00014544155714402152,
+        "0.75": 0.11999759663137488,
+        "0.95": 0.29102216619770205
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.003414487693328679,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": -5.461444212989819e-05,
+        "column": "Sem6_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    },
+    "8": {
+      "semester": 8,
+      "model": "Ridge",
+      "n_train_rows": 8000,
+      "residual_mean": -8.944047605474559e-05,
+      "residual_std_ddof1": 0.17634349439139616,
+      "skewness": 0.007801959528507797,
+      "excess_kurtosis": -0.11125659474036187,
+      "abs_residual_quantiles": {
+        "0.5": 0.12065309305923622,
+        "0.8": 0.22532129589920605,
+        "0.9": 0.29042166751700177,
+        "0.95": 0.3442879762703365
+      },
+      "signed_residual_quantiles": {
+        "0.05": -0.28856754303779186,
+        "0.25": -0.12145966544888465,
+        "0.5": -0.00016628207840185816,
+        "0.75": 0.1194793371900289,
+        "0.95": 0.2915619261949634
+      },
+      "heteroscedasticity": {
+        "diagnostic": "corr(|residual|, prediction)",
+        "value": 0.0035281195614123837,
+        "note": "Diagnostic only, on training-split out-of-fold predictions. A near-zero value is consistent with homoscedasticity but does NOT prove it; a clearly non-zero value would disprove it."
+      },
+      "residual_vs_last_semester_sgpa": {
+        "correlation": 0.00010829355655797802,
+        "column": "Sem7_CGPA",
+        "n_rows": 8000,
+        "note": null
+      },
+      "interval_90_source": "0.90 quantile of |training-split OOF residual|",
+      "residual_std_source": "training-split OOF residual std (ddof=1)"
+    }
+  }
+}

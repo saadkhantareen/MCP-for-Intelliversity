@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.core.models import BaseModel
-from . import choices
+from apps.attendance.choices import AttendanceStatus, DeliveryMode, SessionStatus, SessionType
 
 
 # ===========================================================================
@@ -165,13 +165,13 @@ class ClassSession(BaseModel):
     # ---- what ------------------------------------------------------------
     session_type = models.CharField(
         max_length=20,
-        choices=choices.SessionType.choices,
-        default=choices.SessionType.LECTURE,
+        choices=SessionType.choices,
+        default=SessionType.LECTURE,
     )
     status = models.CharField(
         max_length=20,
-        choices=choices.SessionStatus.choices,
-        default=choices.SessionStatus.SCHEDULED,
+        choices=SessionStatus.choices,
+        default=SessionStatus.SCHEDULED,
         db_index=True,
         help_text="BR5 — only HELD is counted in the denominator.",
     )
@@ -182,8 +182,8 @@ class ClassSession(BaseModel):
     room = models.CharField(max_length=50, blank=True)
     delivery_mode = models.CharField(
         max_length=20,
-        choices=choices.DeliveryMode.choices,
-        default=choices.DeliveryMode.ONSITE,
+        choices=DeliveryMode.choices,
+        default=DeliveryMode.ONSITE,
     )
     cancellation_reason = models.TextField(blank=True)
 
@@ -279,8 +279,8 @@ class AttendanceRecord(BaseModel):
 
     status = models.CharField(
         max_length=20,
-        choices=choices.AttendanceStatus.choices,
-        default=choices.AttendanceStatus.ABSENT,
+        choices=AttendanceStatus.choices,
+        default=AttendanceStatus.ABSENT,
         help_text="Default ABSENT on purpose: 'faculty forgot to mark' must "
                   "never silently become 'everyone present'.",
     )
@@ -317,7 +317,7 @@ class AttendanceRecord(BaseModel):
     @property
     def counts_as_present(self) -> bool:
         """BR6 — LEAVE is present-equivalent."""
-        return self.status in choices.AttendanceStatus.present_equivalent()
+        return self.status in AttendanceStatus.present_equivalent()
 # ===========================================================================
 # MODEL 4 : AttendanceLog  —  append-only audit trail (BR11)
 # Written by the service on EVERY status change (creation included).
@@ -335,11 +335,11 @@ class AttendanceLog(BaseModel):
         related_name="logs",
     )
     old_status = models.CharField(
-        max_length=20, choices=choices.AttendanceStatus.choices, blank=True,
+        max_length=20, choices=AttendanceStatus.choices, blank=True,
         help_text="Empty when the record was first created.",
     )
     new_status = models.CharField(
-        max_length=20, choices=choices.AttendanceStatus.choices,
+        max_length=20, choices=AttendanceStatus.choices,
     )
     changed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

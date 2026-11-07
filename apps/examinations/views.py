@@ -4,8 +4,9 @@ from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.academics.models import CourseOffering, StudentTermRecord, Term
-from apps.accounts.models import Roles
+from apps.enrollments.models import CourseOffering
+from apps.academics.models import StudentTermRecord, Term
+from apps.accounts.models import Role
 from apps.examinations.models import (
     Assessment,
     AssessmentPolicy,
@@ -24,7 +25,14 @@ from apps.examinations.serializers import (
     StudentAssessmentSerializer,
 )
 
-from .permissions import IsAdminUserOrReadOnly, IsFacultyUser
+from apps.profiles.permissions import (
+    IsAdminOrFaculty,
+    IsAdminOrStudent,
+    IsFaculty,
+    IsStudent,
+)
+
+# from .permissions import IsAdminUserOrReadOnly, IsFacultyUser
 from .services import calculate_and_save_term_results
 
 # 1. ADMIN APIS (Types, Policies & Grading Setup)
@@ -33,7 +41,7 @@ from .services import calculate_and_save_term_results
 class AssessmentTypeViewSet(viewsets.ModelViewSet):
     queryset = AssessmentType.objects.all()
     serializer_class = AssessmentTypeSerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminOrFaculty]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -46,7 +54,7 @@ class AssessmentTypeViewSet(viewsets.ModelViewSet):
 class AssessmentPolicyViewSet(viewsets.ModelViewSet):
     queryset = AssessmentPolicy.objects.select_related("term", "assessment_type").all()
     serializer_class = AssessmentPolicySerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminOrFaculty]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["term", "assessment_type"]
 
@@ -58,14 +66,14 @@ class GradePolicyViewSet(viewsets.ModelViewSet):
         .all()
     )
     serializer_class = GradePolicySerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminOrFaculty]
     filterset_fields = ["term"]
 
 
 class GradeScaleViewSet(viewsets.ModelViewSet):
     queryset = GradeScale.objects.select_related("grade_policy").all()
     serializer_class = GradeScaleSerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminOrFaculty]
     filterset_fields = ["grade_policy"]
 
 
@@ -78,25 +86,29 @@ class FacultyAssessmentViewSet(viewsets.ModelViewSet):
     """
 
     queryset = Assessment.objects.select_related(
-        "course_offering__faculty_course__faculty",
-        "course_offering__faculty_course__course",
+        "course_offering__course",
+        "course_offering__term",
+        "course_offering__section",
         "assessment_type",
     ).all()
     serializer_class = AssessmentSerializer
-    permission_classes = [IsFacultyUser]
+    permission_classes = [IsFaculty]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["course_offering", "assessment_type", "marks_submitted"]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
+            queryset = super().get_queryset()
+            user = self.request.user
 
-        # Filtering according to CourseOffering -> FacultyCourse relation
-        if getattr(user, "role", None) == Roles.FACULTY:
-            return queryset.filter(
-                course_offering__faculty_course__faculty=user.profile
-            )
-        return queryset
+            if getattr(user, "is_admin", False):
+                return queryset
+
+            if getattr(user, "is_faculty", False):
+                return queryset.filter(
+                    course_offering__faculty_assignments__faculty__base_profile__user=user
+                )
+
+            return queryset.none()
 
     @action(detail=True, methods=["get"], url_path="gradebook")
     def gradebook(self, request, pk=None):
@@ -166,10 +178,10 @@ class FacultyStudentAssessmentViewSet(viewsets.ModelViewSet):
     """
 
     queryset = StudentAssessment.objects.select_related(
-        "assessment__course_offering__faculty_course", "student"
+        "assessment__course_offering", "student"
     ).all()
     serializer_class = StudentAssessmentSerializer
-    permission_classes = [IsFacultyUser]
+    permission_classes = [IsFaculty]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["assessment", "student"]
 
@@ -177,17 +189,45 @@ class FacultyStudentAssessmentViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
-        if getattr(user, "role", None) == Roles.FACULTY:
-            return queryset.filter(
-                assessment__course_offering__faculty_course__faculty=user.profile
-            )
-        return queryset
+        if getattr(user, "is_admin", False):
+            return queryset
 
+        if getattr(user, "is_faculty", False):
+            return queryset.filter(
+                assessment__course_offering__faculty_assignments__faculty__base_profile__user=user
+            )
+
+        return queryset.none()
 
 # ==============================================================================
 # 3. RESULT, SGPA, & CGPA APIS
 # ==============================================================================
 
+
+
+class StudentAssessmentViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Allows Students to view their own published assessment marks.
+    """
+    serializer_class = StudentAssessmentSerializer
+    permission_classes = [IsAdminOrStudent]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["assessment", "assessment__course_offering"]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = StudentAssessment.objects.select_related(
+            "assessment__course_offering", "student"
+        ).all()
+
+        if getattr(user, "is_admin", False):
+            return queryset
+
+        if getattr(user, "is_student", False):
+            return queryset.filter(student__base_profile__user=user)
+
+        return queryset.none()
+        
 
 class StudentResultViewSet(viewsets.ViewSet):
     """
@@ -198,7 +238,7 @@ class StudentResultViewSet(viewsets.ViewSet):
         user = request.user
         student_profile = None
 
-        if getattr(user, "role", None) == Roles.STUDENT:
+        if getattr(user, "role", None) == Role.STUDENT:
             student_profile = getattr(user, "profile", None)
         else:
             student_id = request.query_params.get("student_id")
@@ -230,7 +270,7 @@ class StudentResultViewSet(viewsets.ViewSet):
                 {
                     "term_id": tr.term.id,
                     "term_name": tr.term.name,
-                    "sgpa": tr.gpa,
+                    "sgpa": tr.sgpa,
                     "academic_standing": tr.academic_standing,
                     "status": tr.status,
                 }
@@ -273,3 +313,7 @@ class StudentResultViewSet(viewsets.ViewSet):
 
         summary = calculate_and_save_term_results(student, term)
         return Response(summary, status=status.HTTP_200_OK)
+
+
+
+    

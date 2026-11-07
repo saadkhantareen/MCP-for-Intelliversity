@@ -1,5 +1,6 @@
 from django.db.models import Sum
 from rest_framework import serializers
+from apps.enrollments.choices import EnrollmentStatus
 
 from .models import (
     Assessment,
@@ -233,7 +234,6 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
         return attrs
 
-
 class StudentAssessmentSerializer(serializers.ModelSerializer):
     """
     PURPOSE:
@@ -247,12 +247,24 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
 
     student_name = serializers.CharField(source="student.full_name", read_only=True)
     roll_number = serializers.CharField(source="student.roll_number", read_only=True)
+    
+    # Naye fields jo frontend par assessment ki details show karne ke liye chahiye
+    assessment_title = serializers.CharField(source="assessment.title", read_only=True)
+    total_marks = serializers.DecimalField(
+        source="assessment.total_marks", max_digits=6, decimal_places=2, read_only=True
+    )
+    assessment_type = serializers.CharField(
+        source="assessment.assessment_type.name", read_only=True, default="N/A"
+    )
 
     class Meta:
         model = StudentAssessment
         fields = [
             "id",
             "assessment",
+            "assessment_title",
+            "assessment_type",
+            "total_marks",
             "student",
             "student_name",
             "roll_number",
@@ -294,7 +306,8 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
         # 3. Verify student enrollment in the course offering
         if student and assessment:
             is_enrolled = student.enrollments.filter(
-                course_offering=assessment.course_offering, is_active=True
+                course_offering=assessment.course_offering,
+                status=EnrollmentStatus.ENROLLED,
             ).exists()
             if not is_enrolled:
                 raise serializers.ValidationError(
@@ -305,14 +318,13 @@ class StudentAssessmentSerializer(serializers.ModelSerializer):
 
         return attrs
 
-
 class GradebookStudentMarkItemSerializer(serializers.Serializer):
     """
     PURPOSE:
     Helper serializer representing a single student row within the faculty gradebook payload.
     """
 
-    student_id = serializers.IntegerField()
+    student_id = serializers.UUIDField()
     obtained_marks = serializers.DecimalField(
         max_digits=5, decimal_places=2, required=False, allow_null=True
     )

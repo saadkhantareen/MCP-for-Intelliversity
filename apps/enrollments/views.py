@@ -3,7 +3,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.views import APIView
 
+from apps.enrollments.choices import EnrollmentStatus
 from apps.enrollments.filters import CourseOfferingFilter
 from apps.enrollments.models import CourseOffering, Enrollment, FacultyAssignment
 from apps.enrollments.serializers import (
@@ -11,7 +13,9 @@ from apps.enrollments.serializers import (
     EnrollmentSerializer,
     FacultyAssignmentSerializer,
     GenerateCourseOfferingsSerializer,
+    EnrolledStudentSerializer,
 )
+from apps.profiles.models import StudentProfile
 from apps.profiles.permissions import (
     IsAdminOrFaculty,
     IsAdminOrStudent,
@@ -22,7 +26,7 @@ from apps.profiles.permissions import (
 
 class CourseOfferingViewSet(ModelViewSet):
     queryset = CourseOffering.objects.select_related(
-        "curriculum_course__course",
+        "course",
         "term",
         "section__batch",
     ).prefetch_related("faculty_assignments__faculty__base_profile__user")
@@ -39,7 +43,7 @@ class CourseOfferingViewSet(ModelViewSet):
     )
     def generate_offerings(self, request, pk=None):
         serializer = GenerateCourseOfferingsSerializer(data=request.data)
-        serializer.is_validate(raise_exception=True)
+        serializer.is_valid(raise_exception=True)
         serializer.save()
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -60,16 +64,13 @@ class CourseOfferingViewSet(ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        queryset = (
-            CourseOffering.objects.select_related(
-                "curriculum_course__course",
-                "term",
-                "section__batch",
-            )
-            .filter(
-                curriculum_course__course__available_faculty__faculty=faculty_profile
-            )
-            .distinct()
+        queryset = CourseOffering.objects.select_related(
+            "course",
+            "term",
+            "section__batch",
+        ).filter(
+            # course__available_faculty__faculty=faculty_profile,
+            faculty_assignments__isnull=True,
         )
 
         serializer = self.get_serializer(queryset, many=True)
@@ -96,13 +97,23 @@ class CourseOfferingViewSet(ModelViewSet):
             # return empty offerings for first semester students as they will be enrolled automatically.
             return Response([], status=status.HTTP_200_OK)
 
-        base_queryset = CourseOffering.objects.select_related(
-            "curriculum_course__course",
-            "term",
-            "section__batch",
-        ).filter(
-            section__batch=student_profile.batch,
-            curriculum_course__recommended_semester=current_semester,
+        base_queryset = (
+            CourseOffering.objects.select_related(
+                "course",
+                "term",
+                "section__batch",
+            )
+            .filter(
+                section__batch=student_profile.batch,
+                course__curriculum_courses__recommended_semester=current_semester,
+            )
+            .exclude(
+                enrollments__student=student_profile,
+                enrollments__status__in=[
+                    EnrollmentStatus.ENROLLED,
+                    EnrollmentStatus.COMPLETED,
+                ],
+            )
         )
 
         # TODO: add failed course logic here when we have a way to track failed courses from examinations module.
@@ -112,15 +123,15 @@ class CourseOfferingViewSet(ModelViewSet):
                 "dropped",
                 "withdrawn",
             ],
-        ).values_list("course_offering__curriculum_course__course_id", flat=True)
+        ).values_list("course_offering__course_id", flat=True)
 
         retake_queryset = CourseOffering.objects.select_related(
-            "curriculum_course__course",
+            "course",
             "term",
             "section__batch",
         ).filter(
             section__batch=student_profile.batch,
-            curriculum_course__course_id__in=retake_course_ids,
+            course_id__in=retake_course_ids,
         )
 
         queryset = (base_queryset | retake_queryset).distinct()
@@ -130,13 +141,12 @@ class CourseOfferingViewSet(ModelViewSet):
 
 
 class FacultyAssignmentViewSet(ModelViewSet):
-
     serializer_class = FacultyAssignmentSerializer
     permission_classes = [DjangoModelPermissions, IsAdminOrFaculty]
 
     def get_queryset(self):
         queryset = FacultyAssignment.objects.select_related(
-            "course_offering__curriculum_course__course",
+            "course_offering__course",
             "course_offering__term",
             "course_offering__section__batch",
             "faculty__base_profile__user",
@@ -152,6 +162,20 @@ class FacultyAssignmentViewSet(ModelViewSet):
 
         return queryset.none()
 
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs.setdefault("context", self.get_serializer_context())
+
+        if self.action in ["create", "update", "partial_update"]:
+            user = self.request.user
+            if getattr(user, "is_faculty", False):
+                # Copy request.data (since QueryDict / dict might be immutable)
+                data = kwargs.get("data", self.request.data).copy()
+                data["faculty_id"] = user.base_profile.faculty_profile.pk
+                kwargs["data"] = data
+
+        return serializer_class(*args, **kwargs)
+
 
 class EnrollmentViewSet(ModelViewSet):
 
@@ -160,7 +184,7 @@ class EnrollmentViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = Enrollment.objects.select_related(
-            "course_offering__curriculum_course__course",
+            "course_offering__course",
             "course_offering__term",
             "course_offering__section__batch",
             "student__base_profile__user",
@@ -175,3 +199,46 @@ class EnrollmentViewSet(ModelViewSet):
             return queryset.filter(student__base_profile__user=user)
 
         return queryset.none()
+
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs.setdefault("context", self.get_serializer_context())
+
+        if self.action in ["create", "update", "partial_update"]:
+            user = self.request.user
+            if getattr(user, "is_student", False):
+                # Copy request.data (since QueryDict / dict might be immutable)
+                data = kwargs.get("data", self.request.data).copy()
+                data["student_id"] = user.base_profile.student_profile.pk
+                kwargs["data"] = data
+
+        return serializer_class(*args, **kwargs)
+
+
+class EnrolledStudentAPIView(APIView):
+    serializer_class = EnrolledStudentSerializer
+    permission_classes = [DjangoModelPermissions, IsAdminOrFaculty]
+    queryset = StudentProfile.objects.select_related(
+        "base_profile__user",
+        "section__batch",
+    ).prefetch_related(
+        "enrollments__course_offering__course",
+        "enrollments__course_offering__term",
+    )
+
+    def get(self, request, *args, **kwargs):
+        course_offering_id = request.query_params.get("course_offering_id")
+
+        if not course_offering_id:
+            return Response(
+                {"detail": "course_offering_id query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        students = StudentProfile.objects.filter(
+            enrollments__course_offering_id=course_offering_id
+        ).distinct()
+
+        serializer = self.serializer_class(students, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -94,7 +94,7 @@ class Assessment(BaseModel):
     """
 
     course_offering = models.ForeignKey(
-        "academics.CourseOffering",
+        "enrollments.CourseOffering",
         on_delete=models.CASCADE,
         related_name="assessments",
     )

@@ -1,0 +1,15 @@
+# Exact training dependencies for `ml/train.py`.
+#
+# The shipped artifacts are pickled scikit-learn pipelines: loading them with a
+# different scikit-learn version is not guaranteed to work (and may warn), so
+# the training environment is pinned rather than floating. These versions are
+# recorded verbatim in `ml/artifacts/manifest.json -> library_versions` for the
+# versions train.py imports; joblib/openpyxl are pinned too because they are
+# part of the same reproducible run.
+#
+# Verified with:  uv run --no-project --python 3.12 --with-requirements ml/requirements-train.txt python ml/train.py
+scikit-learn==1.9.1
+pandas==3.1.0
+numpy==2.5.4
+joblib==1.6.0
+openpyxl==3.1.5

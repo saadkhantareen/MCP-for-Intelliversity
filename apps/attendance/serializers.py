@@ -87,7 +87,13 @@ class ClassSessionSerializer(serializers.ModelSerializer):
         ]
 
     def get_course_offering_label(self, obj):
-        return str(obj.course_offering)
+        off = obj.course_offering
+        if not off:
+            return ""
+        try:
+            return f"{off.course.code} — {off.course.name} ({off.term.name} · Sec {off.section.name})"
+        except Exception:
+            return str(off)
 
     def get_present_count(self, obj):
         return getattr(obj, "present_count", None)
