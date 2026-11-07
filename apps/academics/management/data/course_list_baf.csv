@@ -1,0 +1,47 @@
+course_code,Course Title,Credits,Semester,department,prerequisites
+MGT161,Quantitative Analysis for Management I,3,1,BA,
+HUM104,Functional English,3,1,BA,
+CSC101,Applications of Information and Communication Technologies,3,1,BA,
+MGT101,Introduction to Management,3,1,BA,
+HUM112,Islamic Studies,2,1,BA,
+MGT132,Principles of Accounting,3,1,BA,
+MGT191,Financial Accounting,3,2,BA,MGT132
+MGT162,Quantitative Analysis for Management II,3,2,BA,MGT161
+MGT210,Fundamentals of Marketing,3,2,BA,
+CSC210,Professional Practices,2,2,BA,
+HUM120,Expository Writing,3,2,BA,
+HUM113,Ideology and Constitution of Pakistan,2,2,BA,
+ACC201,Cost and Management Accounting,3,3,BA,MGT191
+FIN300,Financial Institutions and Markets,3,3,BA,
+HUM122,Fundamentals of Psychology,2,3,BA,
+MGT232,Business Finance,3,3,BA,
+ACC300,Contemporary Taxation,3,3,BA,
+MGT300,Organizational Behavior,3,3,BA,
+ACC301,Intermediate Financial Accounting,3,4,BA,MGT191
+FSN246,Contemporary Nutrition,3,4,BA,
+MGT330,Financial Management,3,4,BA,MGT232
+MGT250,Introduction to Entrepreneurship,2,4,BA,
+HUM208,Civics and Community Engagement,2,4,BA,
+MGT370,Auditing,3,4,BA,
+MGT497,Internship,3,4,BA,
+MGT173,Programming language for Business Analytics,3,5,BA,
+MGT315,Financial Reporting,3,5,BA,ACC301
+MGT301,Research Tools and Techniques,3,5,BA,
+ECO400,Business Economics,3,5,BA,
+LAW300,Corporate Law,3,5,BA,
+ECO410,Econometric Methods and Applications,3,5,BA,MGT162
+MGT387,Databases for Business,3,6,BA,CSC101
+FIN450,Investment and Portfolio Management,3,6,BA,MGT330
+MGT401,Corporate Governance,3,6,BA,
+FIN471,Islamic Banking and Finance,3,6,BA,
+FIN472,Derivatives and Financial Risk Management,3,6,BA,MGT330
+ACC402,Accounting Information System,3,7,BA,MGT387
+FIN460,Corporate Finance,3,7,BA,MGT330
+FIN473,Financial Econometrics,3,7,BA,
+FIN474,Advanced Financial Markets and Institutions,3,7,BA,
+FIN475,Marketing of Financial Services,3,7,BA,
+MGT497,Capstone Project,3,8,BA,
+ACC469,Business Performance Management Control,3,8,BA,
+FIN476,International Finance,3,8,BA,MGT330
+FIN478,Seminar in Finance,3,8,BA,MGT330
+FIN480,Behavioral Finance,3,8,BA,MGT330

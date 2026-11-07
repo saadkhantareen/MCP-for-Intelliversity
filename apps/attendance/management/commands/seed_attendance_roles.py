@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
+from apps.tenants.context import tenant_context
 from apps.tenants.models import University
 from apps.tenants.utils.db_utils import ensure_tenant_db_configured, close_tenant_db_connection
 
@@ -37,20 +38,21 @@ class Command(BaseCommand):
                 db_key = ensure_tenant_db_configured(uni)
                 connections[db_key].ensure_connection()
                 self.stdout.write(f"--- {uni.subdomain} ({db_key}) ---")
-                self._seed(db_key)
+                with tenant_context(uni):
+                    self._seed()
             except Exception as e:
                 self.stderr.write(f"Error for {uni.name}: {e}")
             finally:
                 if db_key:
                     close_tenant_db_connection(alias=db_key)
 
-    def _seed(self, db_key):
+    def _seed(self):
         for group_name, models_map in ATTENDANCE_PERMISSIONS.items():
-            group, _ = Group.objects.using(db_key).get_or_create(name=group_name)
+            group, _ = Group.objects.get_or_create(name=group_name)
 
             for model_name, actions in models_map.items():
                 try:
-                    ct = ContentType.objects.using(db_key).get(
+                    ct = ContentType.objects.get(
                         app_label="attendance", model=model_name
                     )
                 except ContentType.DoesNotExist:
@@ -60,7 +62,7 @@ class Command(BaseCommand):
                     continue
 
                 codenames = [f"{action}_{model_name}" for action in actions]
-                perms = Permission.objects.using(db_key).filter(
+                perms = Permission.objects.filter(
                     content_type=ct, codename__in=codenames
                 )
                 group.permissions.add(*perms)

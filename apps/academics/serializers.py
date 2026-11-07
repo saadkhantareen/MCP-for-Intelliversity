@@ -1,6 +1,3 @@
-import math
-import string
-
 from django.db import transaction
 from rest_framework import serializers
 
@@ -18,6 +15,10 @@ from apps.academics.models import (
     Term,
 )
 from apps.academics.utils.utils import set_prerequisites
+from apps.academics.services import (
+    SectionGenerationError,
+    generate_sections_for_batch,
+)
 from apps.academics.validators import (
     validate_min_credits_lte_max_credits,
     validate_already_active,
@@ -29,7 +30,7 @@ from apps.academics.validators import (
     validate_program_curriculum_same,
     validate_start_lte_end,
 )
-from apps.profiles.models import FacultyProfile, StudentProfile
+from apps.profiles.models import FacultyProfile
 
 
 class AcademicPolicySerializer(serializers.ModelSerializer):
@@ -322,72 +323,10 @@ class BatchAutoSectionSerializer(serializers.Serializer):
     def create(self, validated_data):
         batch = self.context["batch"]
 
-        with transaction.atomic():
-            students = list(
-                StudentProfile.objects.filter(batch=batch)
-                .select_related("base_profile__user")
-                .order_by(
-                    "base_profile__user__first_name", "base_profile__user__last_name"
-                )
-            )
-
-            total_students = len(students)
-            if total_students == 0:
-                raise serializers.ValidationError(
-                    "No students found registered for this batch."
-                )
-
-            # Calculate required number of sections based on batch capacity
-            max_per_section = batch.per_section_capacity
-            num_sections = math.ceil(total_students / max_per_section)
-
-            section_names = string.ascii_uppercase
-            if num_sections > len(section_names):
-                raise serializers.ValidationError(
-                    "Calculated sections exceed the A-Z naming limit (26 sections)."
-                )
-
-            # Create the Sections
-            created_sections = []
-            for i in range(num_sections):
-                section = Section.objects.create(
-                    name=f"{section_names[i]}",
-                    batch=batch,
-                )
-                created_sections.append(section)
-
-            # Calculate how to distribute students evenly
-            base_chunk_size = total_students // num_sections
-            remainder = total_students % num_sections
-
-            start_idx = 0
-            students_to_update = []
-
-            for i in range(num_sections):
-                # Distribute the remainder by adding 1 extra student to the first few sections
-                chunk_size = base_chunk_size + (1 if i < remainder else 0)
-                end_idx = start_idx + chunk_size
-
-                section_students = students[start_idx:end_idx]
-                for student in section_students:
-                    student.section = created_sections[i]
-                    students_to_update.append(student)
-
-                start_idx = end_idx
-
-            # Save all student updates efficiently in a single query
-            StudentProfile.objects.bulk_update(students_to_update, ["section"])
-
-        # Return data that will be passed to to_representation
-        return {
-            "total_students": total_students,
-            "sections_created": [s.name for s in created_sections],
-            "students_per_section": (
-                f"{base_chunk_size} to {base_chunk_size + 1}"
-                if remainder
-                else str(base_chunk_size)
-            ),
-        }
+        try:
+            return generate_sections_for_batch(batch)
+        except SectionGenerationError as exc:
+            raise serializers.ValidationError(str(exc))
 
     def to_representation(self, instance):
         return {
