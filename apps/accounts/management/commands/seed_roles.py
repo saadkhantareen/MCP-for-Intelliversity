@@ -44,6 +44,7 @@ from apps.examinations.models import (
 from apps.finance.models import StudentFeeInvoice
 from apps.profiles.models import Document, FacultyProfile, StudentProfile
 from apps.tenants.models import University
+from apps.tenants.context import tenant_context
 from apps.tenants.utils.db_utils import (
     close_tenant_db_connection,
     ensure_tenant_db_configured,
@@ -146,8 +147,8 @@ class Command(BaseCommand):
             try:
                 db_key = ensure_tenant_db_configured(university)
                 self.stdout.write(f"Seeding roles for {university.name}...")
-                with transaction.atomic(using=db_key):
-                    self._seed_for_tenant(db_key)
+                with tenant_context(university), transaction.atomic(using=db_key):
+                    self._seed_for_tenant()
                 self.stdout.write(
                     self.style.SUCCESS(f"Role configured for {university.name}.")
                 )
@@ -159,14 +160,14 @@ class Command(BaseCommand):
                 if db_key:
                     close_tenant_db_connection(alias=db_key)
 
-    def _seed_for_tenant(self, db_key):
+    def _seed_for_tenant(self):
         through = self.group_perm_through
 
         # One query for every permission row on this tenant DB, instead of
         # one query per (model, action) pair as the original get_permission()
         # helper did.
         all_perms = list(
-            Permission.objects.using(db_key).select_related("content_type")
+            Permission.objects.select_related("content_type")
         )
         perm_lookup = {}
         for perm in all_perms:
@@ -176,7 +177,7 @@ class Command(BaseCommand):
             ] = perm
 
         for role, spec in ROLE_PERMISSIONS.items():
-            group, _ = Group.objects.using(db_key).get_or_create(name=role.value)
+            group, _ = Group.objects.get_or_create(name=role.value)
 
             if spec == ALL_PERMS:
                 perm_ids = {
@@ -210,20 +211,19 @@ class Command(BaseCommand):
             # command after editing the matrix actually converges instead of
             # only ever growing.
             existing_ids = set(
-                through.objects.using(db_key)
-                .filter(group_id=group.id)
+                through.objects.filter(group_id=group.id)
                 .values_list("permission_id", flat=True)
             )
             to_add = perm_ids - existing_ids
             to_remove = existing_ids - perm_ids
 
             if to_add:
-                through.objects.using(db_key).bulk_create(
+                through.objects.bulk_create(
                     [through(group_id=group.id, permission_id=pid) for pid in to_add],
                     ignore_conflicts=True,
                 )
             if to_remove:
-                through.objects.using(db_key).filter(
+                through.objects.filter(
                     group_id=group.id, permission_id__in=to_remove
                 ).delete()
 

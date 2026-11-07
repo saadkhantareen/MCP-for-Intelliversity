@@ -1,0 +1,43 @@
+course_code,Course Title,Credits,Semester,department,prerequisites
+CSC101,Introduction to ICT,3,1,CS,
+CSC103,Programming Fundamentals,4,1,CS,
+HUM100,English Comprehension and Composition,3,1,CS,
+HUM110,Islamic Studies,3,1,CS,
+PHY121,Applied Physics for Engineers,4,1,CS,
+CSC102,Discrete Structures,3,2,CS,
+CSC241,Object Oriented Programming,4,2,CS,CSC103
+CSC410,Professional Practices,3,2,CS,
+HUM103,Communication Skills,3,2,CS,
+MGT101,Introduction to Management,3,2,CS,
+CSC211,Data Structures and Algorithms,4,3,CS,CSC241
+CSC291,Software Engineering Concepts,3,3,CS,
+HUM102,Report Writing Skills,3,3,CS,
+HUM111,Pakistan Studies,3,3,CS,
+MTH104,Calculus and Analytic Geometry,3,3,CS,
+MTH262,Statistics and Probability Theory,3,3,CS,MTH104
+CSC270,Database Systems,4,4,CS,CSC211
+CSC336,Web Technologies,3,4,CS,CSC103
+CSC340,Computer Networks,4,4,CS,CSC211
+CSE356,Formal Methods,3,4,CS,
+MTH231,Linear Algebra,3,4,CS,MTH104
+CSC303,Mobile Application Development,3,5,CS,CSC241
+CSC323,Principles of Operating Systems,4,5,CS,CSC211
+CSE303,Software Design and Architecture,3,5,CS,CSC291
+CSE305,Software Requirement Engineering,3,5,CS,CSC291
+ECO300,Engineering Economics,3,5,CS,
+MGT131,Financial Accounting,3,5,CS,
+CSC432,Information Security,3,6,CS,CSC340
+CSC462,Artificial Intelligence,4,6,CS,CSC211
+CSE302,Software Quality Engineering,3,6,CS,CSE305
+CSE327,Software Re-Engineering,3,6,CS,
+CSE494,Software Project Management,3,6,CS,
+MTH467,Operations Research,3,6,CS,
+CSC356,Human Computer Interaction,3,7,CS,
+CSC495,Game Development,4,7,CS,CSC211
+CSE325,Software Construction and Development,3,7,CS,
+CSE357,Business Process Engineering,3,7,CS,
+CSE498,Senior Design Project I,2,7,CS,CSE303
+CSC418,DevOps for Cloud Computing,3,8,CS,CSC340
+CSE482,Automated Software Testing,3,8,CS,CSE325
+CSE499,Senior Design Project II,4,8,CS,CSE498
+MGT350,Human Resource Management,3,8,CS,
