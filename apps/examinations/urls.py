@@ -9,6 +9,7 @@ from .views import (
     GradePolicyViewSet,
     GradeScaleViewSet,
     StudentResultViewSet,
+    StudentAssessmentViewSet
 )
 
 router = DefaultRouter()
@@ -34,6 +35,7 @@ router.register(
 # Results Endpoints
 router.register(r"results", StudentResultViewSet, basename="student-results")
 
+router.register(r"student-assessments", StudentAssessmentViewSet, basename="student-assessment")
 urlpatterns = [
     path("", include(router.urls)),
 ]

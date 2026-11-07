@@ -52,7 +52,7 @@ class AcademicPolicy(BaseModel):
     def load(cls):
         obj = cls.objects.first()
         if not obj:
-            raise cls.DoesNotExist("AcademicPolicy has not been initialized.")
+            obj = cls.objects.create(max_credits_per_term=21, min_credits_per_term=12)
         return obj
 
 

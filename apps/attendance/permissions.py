@@ -22,7 +22,7 @@ from .models import AttendanceRecord, ClassSession
 # Project-specific configuration
 # ---------------------------------------------------------------------------
 ADMIN_PORTAL = "admin"
-APPROVED_ASSIGNMENT_STATUSES = ("accepted",)
+APPROVED_ASSIGNMENT_STATUSES = ("approved", "accepted")
 FACULTY_ASSIGNMENTS_RELATED_NAME = "faculty_assignments"   # on CourseOffering
 
 _MISSING = object()

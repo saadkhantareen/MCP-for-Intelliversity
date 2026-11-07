@@ -26,29 +26,36 @@ class PortalBrandingDetailView(APIView):
     def get(self, request: Request, **kwargs: dict) -> Response:
         domain = request.query_params.get("domain")
 
-        try:
-            portal_branding = (
-                PortalBranding.objects.select_related(
-                    "university_portal",
-                    "university_portal__university",
-                    "university_portal__portal",
-                )
-                .prefetch_related(
-                    "university_portal__domains",
-                    Prefetch(
-                        "university_portal__page_assets",
-                        # as branding is called once on the login page, so we return the login page asset here to save an extra call from the client
-                        queryset=PageAsset.objects.filter(page_type="login"),
-                        to_attr="login_page_asset",
-                    ),
-                )
-                .filter(
-                    university_portal__domains__domain=domain,
-                    university_portal__is_active=True,
-                )
-                .first()
+        portal_branding = (
+            PortalBranding.objects.select_related(
+                "university_portal",
+                "university_portal__university",
+                "university_portal__portal",
             )
-        except PortalBranding.DoesNotExist:
+            .prefetch_related(
+                "university_portal__domains",
+                Prefetch(
+                    "university_portal__page_assets",
+                    # as branding is called once on the login page, so we return the login page asset here to save an extra call from the client
+                    queryset=PageAsset.objects.filter(page_type="login"),
+                    to_attr="login_page_asset",
+                ),
+            )
+            .filter(
+                university_portal__domains__domain=domain,
+                university_portal__is_active=True,
+            )
+            .first()
+        )
+
+        # .first() returns None when nothing matches; it does NOT raise
+        # DoesNotExist. An earlier version wrapped this in
+        # "except PortalBranding.DoesNotExist", so the branch was unreachable and
+        # an unregistered domain serialised None into a 200 {} body. The
+        # frontend cannot tell that apart from real branding - {} is truthy, so
+        # it happily renders a portal with no identity instead of the
+        # "Portal Not Found" screen. Answer 404 explicitly.
+        if portal_branding is None:
             return Response(
                 {
                     "detail": "No active PortalBranding found for this university portal."

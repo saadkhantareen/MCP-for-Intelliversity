@@ -69,6 +69,8 @@ PROJECT_APPS = [
     "apps.attendance",
     "apps.examinations",
     "apps.finance",
+    "apps.mcp",
+    "apps.predictions",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
@@ -187,6 +189,12 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Forecast endpoints are the only ones with a per-request model call, so
+    # they carry their own budgets. Rate limit values are a demo default.
+    "DEFAULT_THROTTLE_RATES": {
+        "predictions": ENV("CGPA_THROTTLE_PREDICTIONS", default="120/min"),
+        "predictions_cohort": ENV("CGPA_THROTTLE_COHORT", default="30/min"),
+    },
 }
 
 # JWT Settings
@@ -261,3 +269,31 @@ cloudinary.config(
     api_secret=ENV("CLOUDINARY_API_SECRET"),
     signature_algorithm=ENV("CLOUDINARY_SIGNATURE_ALGORITHM", default="sha256"),
 )
+
+# ---------------------------------------------------------------------------
+# CGPA prediction (bundled, pre-trained models — see ml/train.py and
+# docs/09_CGPA_PREDICTION_ARCHITECTURE.md). The university never trains or
+# substitutes these models; the paths below only control where the shipped
+# artifacts live and how the guardrail clamps output.
+#
+# DEMO ONLY. These are not supervisor policy and they have not been validated
+# against real cohorts:
+#   * CGPA_GUARDRAIL_MIN_AVG = 3.0 is an arbitrary demo threshold. A student
+#     averaging 2.99 gets no guardrail at all; a student at 3.00 does. Changing
+#     it changes what the shipped evaluation means.
+#   * CGPA_AT_RISK_THRESHOLD = 2.0 is a demo triage line, used to compute
+#     P(final CGPA < 2.0). It excludes dropout risk and is not a progression
+#     rule.
+# The shipped models were trained on synthetic data only.
+# ---------------------------------------------------------------------------
+ML_ARTIFACTS_DIR = BASE_DIR / "ml" / "artifacts"
+CGPA_MIN = 0.0
+CGPA_MAX = 4.0
+CGPA_GUARDRAIL_MIN_AVG = 3.0
+CGPA_GUARDRAIL_MAX_DROP = 0.2
+CGPA_AT_RISK_THRESHOLD = 2.0
+#: Upper bound on students processed by one cohort request. Beyond this the
+#: response is flagged truncated; a nightly snapshot is the documented next step.
+CGPA_COHORT_MAX_STUDENTS = ENV.int("CGPA_COHORT_MAX_STUDENTS", default=5000)
+#: Audit retention window, enforced by `manage.py purge_predictions`.
+CGPA_PREDICTION_RETENTION_DAYS = ENV.int("CGPA_PREDICTION_RETENTION_DAYS", default=365)

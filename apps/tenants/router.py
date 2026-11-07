@@ -10,6 +10,15 @@ SHARED_APPS = {"auth", "contenttypes", "accounts", "token_blacklist"}
 # Every other app is tenant-scoped.
 
 
+class TenantNotResolved(ImproperlyConfigured):
+    """A tenant-scoped model was used while no tenant was in context.
+
+    Failing loudly is the point. Silently routing to ``default`` would read or
+    write the wrong database, and in a database-per-tenant product that is the
+    one bug that must never be a fallback.
+    """
+
+
 class UniversityDatabaseRouter:
     def _route(self, model, **hints):
         app_label = model._meta.app_label
@@ -45,7 +54,15 @@ class UniversityDatabaseRouter:
         """Prevent cross-database (and therefore cross-tenant) relations."""
         if obj1._state.db == obj2._state.db:
             return True
-        return None
+
+        app1 = obj1._meta.app_label
+        app2 = obj2._meta.app_label
+        if (app1 in GLOBAL_APPS and app2 in SHARED_APPS) or (
+            app2 in GLOBAL_APPS and app1 in SHARED_APPS
+        ):
+            return True
+
+        return False
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if db == DEFAULT_DB:
