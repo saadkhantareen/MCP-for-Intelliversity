@@ -1,4 +1,6 @@
 from apps.tenants.context import TenantNotSetError, get_current_tenant
+from django.core.exceptions import ImproperlyConfigured
+
 
 DEFAULT_DB = "default"
 
