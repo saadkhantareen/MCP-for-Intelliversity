@@ -9,7 +9,49 @@ from apps.profiles.models import FacultyProfile, StudentProfile
 from ..utils.resolver import parse_date, resolve_offering, section_q
 
 
+def _student_profile(user):
+    return StudentProfile.objects.filter(base_profile__user=user).first()
+
+
+def _faculty_profile(user):
+    return FacultyProfile.objects.filter(base_profile__user=user).first()
+
+
+def _own_student_profile(user):
+    """The requester's own student profile, or refuse if they have none."""
+    profile = _student_profile(user)
+    if profile is None:
+        raise PermissionError("That needs a student account.")
+    return profile
+
+
+def _taught_section_ids(user):
+    """Section ids the requesting faculty teaches (approved assignments)."""
+    faculty = _faculty_profile(user)
+    if not faculty:
+        return set()
+    return set(
+        CourseOffering.objects.filter(
+            faculty_assignments__faculty=faculty,
+            faculty_assignments__status=AssignmentStatus.APPROVED,
+        ).values_list("section_id", flat=True)
+    )
+
+
 def get_attendance_report(user, course_code: str | None = None, section: str | None = None, date_str: str = "today"):
+    if course_code and not section and user is not None and user.is_student:
+        # "My marks/attendance in CSC103": use the student's own section
+        # when they have exactly one enrollment for that course.
+        profile = _student_profile(user)
+        if profile is not None:
+            sections = {
+                enr.course_offering.section.name
+                for enr in Enrollment.objects.filter(
+                    student=profile, course_offering__course__code__iexact=course_code
+                ).select_related("course_offering__section")
+            }
+            if len(sections) == 1:
+                section = sections.pop()
     if not course_code or not section:
         raise ValueError("Please specify both course code and section, for example: PF Section A.")
     offering, _term = resolve_offering(course_code, section)
@@ -19,6 +61,8 @@ def get_attendance_report(user, course_code: str | None = None, section: str | N
         return {"message": f"No session found for {course_code} Sec {section} on {target_date}", "data": []}
 
     records = AttendanceRecord.objects.filter(session=session).select_related("enrollment__student__base_profile__user")
+    if user is not None and user.is_student:
+        records = records.filter(enrollment__student=_own_student_profile(user))
     data = [
         {
             "name": f"{record.enrollment.student.base_profile.user.first_name} {record.enrollment.student.base_profile.user.last_name}",
@@ -27,6 +71,8 @@ def get_attendance_report(user, course_code: str | None = None, section: str | N
         }
         for record in records
     ]
+    if user is not None and user.is_student and not data:
+        return {"message": f"No attendance record for you in {course_code} Sec {section} on {target_date}", "data": []}
     present = sum(1 for row in data if row["status"] in AttendanceStatus.present_equivalent())
     return {"message": f"Attendance {course_code} Sec {section} {target_date}: {present}/{len(data)} Present", "data": data}
 
@@ -56,12 +102,21 @@ def get_my_classes_count(user):
 
 
 def get_defaulters(user, course_code: str | None = None, section: str | None = None, threshold: float = 75):
+    own_profile = None
+    if user is not None and user.is_student:
+        own_profile = _own_student_profile(user)
     if course_code and section:
         offering, _term = resolve_offering(course_code, section)
         offerings = [offering]
-    elif user.is_faculty:
-        faculty = FacultyProfile.objects.filter(base_profile__user=user).first()
+    elif user is not None and user.is_faculty:
+        faculty = _faculty_profile(user)
         offerings = list(CourseOffering.objects.filter(faculty_assignments__faculty=faculty)) if faculty else []
+    elif own_profile is not None:
+        offerings = list(
+            CourseOffering.objects.filter(
+                id__in=Enrollment.objects.filter(student=own_profile).values("course_offering_id")
+            )
+        )
     else:
         offerings = list(CourseOffering.objects.all()[:20])
 
@@ -70,7 +125,10 @@ def get_defaulters(user, course_code: str | None = None, section: str | None = N
         total_held = ClassSession.objects.filter(course_offering=offering, status="held").count()
         if total_held == 0:
             continue
-        for enrollment in Enrollment.objects.filter(course_offering=offering).select_related("student__base_profile__user"):
+        enrollments = Enrollment.objects.filter(course_offering=offering)
+        if own_profile is not None:
+            enrollments = enrollments.filter(student=own_profile)
+        for enrollment in enrollments.select_related("student__base_profile__user"):
             present = AttendanceRecord.objects.filter(
                 enrollment=enrollment,
                 session__course_offering=offering,
@@ -100,6 +158,19 @@ def get_marks_report(
     assessment_type_code: str | None = None,
     sequence: int | None = None,
 ):
+    if course_code and not section and user is not None and user.is_student:
+        # "My marks/attendance in CSC103": use the student's own section
+        # when they have exactly one enrollment for that course.
+        profile = _student_profile(user)
+        if profile is not None:
+            sections = {
+                enr.course_offering.section.name
+                for enr in Enrollment.objects.filter(
+                    student=profile, course_offering__course__code__iexact=course_code
+                ).select_related("course_offering__section")
+            }
+            if len(sections) == 1:
+                section = sections.pop()
     if not course_code or not section or not assessment_type_code or sequence is None:
         raise ValueError("Please specify course code, section, assessment type, and sequence number.")
     offering, _term = resolve_offering(course_code, section)
@@ -116,6 +187,8 @@ def get_marks_report(
         return {"message": f"No {assessment_type_code} {sequence} found for {course_code} Sec {section}", "data": []}
 
     rows = StudentAssessment.objects.filter(assessment=assessment).select_related("student__base_profile__user")
+    if user is not None and user.is_student:
+        rows = rows.filter(student=_own_student_profile(user))
     data = [
         {
             "name": f"{row.student.base_profile.user.first_name} {row.student.base_profile.user.last_name}",
@@ -129,11 +202,15 @@ def get_marks_report(
 
 
 def get_departments(user, **kwargs):
+    if user is not None and not user.is_admin:
+        raise PermissionError("That needs an admin account.")
     depts = list(Department.objects.all().values("code", "name", "description"))
     return {"message": f"{len(depts)} departments", "data": depts}
 
 
 def get_faculty_by_department(user, department_code: str):
+    if user is not None and not (user.is_faculty or user.is_admin):
+        raise PermissionError("That needs a faculty or admin account.")
     dept = Department.objects.filter(code__iexact=department_code).first()
     if not dept:
         return {"message": f"Department {department_code} not found", "data": []}
@@ -187,7 +264,11 @@ def get_curriculum(user, program_code: str | None = None, batch_name: str | None
 
 
 def get_section_students(user, section: str | None = None, batch_name: str | None = None):
+    if user is not None and user.is_student:
+        raise PermissionError("That needs an admin or faculty account.")
     qs = StudentProfile.objects.all().select_related("base_profile__user", "section", "batch")
+    if user is not None and user.is_faculty:
+        qs = qs.filter(section_id__in=_taught_section_ids(user))
     if section:
         qs = qs.filter(section_q("section__name", section))
     if batch_name:
@@ -215,3 +296,41 @@ def get_offerings(user, course_code: str | None = None):
         for offering in qs[:50]
     ]
     return {"message": f"{len(data)} offerings", "data": data}
+
+
+def get_my_cgpa_forecast(user, **kwargs):
+    """The requesting student's own CGPA forecast. Student-only."""
+    if user is not None and not user.is_student:
+        raise PermissionError("That needs a student account.")
+    profile = _own_student_profile(user)
+    from apps.predictions import services
+
+    try:
+        result = services.predict_student(profile, records=list(profile.term_records.all()))
+    except services.InvalidSemester as exc:
+        return {"message": str(exc), "data": []}
+    if not result.get("meaningful"):
+        return {
+            "message": "Not enough data yet for a CGPA forecast: no admission marks and no completed semesters.",
+            "data": [result],
+        }
+    predicted = result.get("predicted_cgpa")
+    current = result.get("current_cgpa")
+    interval = result.get("prediction_interval_90")
+    risk = result.get("at_risk_probability")
+    parts = []
+    if predicted is not None:
+        parts.append(f"Your CGPA forecast is {predicted:.2f}")
+    else:
+        parts.append("Your CGPA forecast is not available")
+    if current is not None:
+        parts.append(f"(current CGPA {current:.2f})")
+    if interval:
+        try:
+            parts.append(f"90% range {float(interval[0]):.2f}-{float(interval[1]):.2f}")
+        except (TypeError, ValueError, IndexError):
+            parts.append(f"90% range {interval}")
+    if risk is not None:
+        pct = risk * 100 if risk <= 1 else risk
+        parts.append(f"risk {pct:.0f}%")
+    return {"message": " ".join(parts) + ".", "data": [result]}

@@ -1,3 +1,4 @@
+import difflib
 import re
 from datetime import date, datetime, timedelta
 
@@ -6,6 +7,101 @@ from django.utils import timezone
 
 from apps.academics.models import Course, Term
 from apps.enrollments.models import CourseOffering
+
+
+class AmbiguousCourseError(ValueError):
+    """Raised when a course query is close to two or more real courses.
+
+    Carries the candidate options so the caller can ask the user to pick
+    one instead of guessing.
+    """
+
+    def __init__(self, query, options):
+        self.query = query
+        self.options = options  # list of {"code": ..., "name": ...}
+        names = ", ".join(f"{o['name']} ({o['code']})" for o in options)
+        super().__init__(f"Ambiguous course '{query}': did you mean {names}?")
+
+
+FUZZY_THRESHOLD = 0.8
+FUZZY_MARGIN = 0.1
+
+
+def _normalize_course_text(value):
+    """Casefold and strip spaces, hyphens and underscores: 'CS 102' -> 'cs102'."""
+    return re.sub(r"[\s\-_]+", "", (value or "").casefold())
+
+
+def _token_score(query_tokens, name_tokens):
+    """Mean best-per-token similarity of the query against a course name."""
+    if not query_tokens or not name_tokens:
+        return 0.0
+    total = 0.0
+    for token in query_tokens:
+        best = max(
+            difflib.SequenceMatcher(None, token, name_token).ratio()
+            for name_token in name_tokens
+        )
+        total += best
+    return total / len(query_tokens)
+
+
+def fuzzy_course_candidates(raw, courses):
+    """Score one course spelling against every known course.
+
+    ``courses`` is a list of (code, name) pairs. Returns ("ok", code)
+    when exactly one candidate clears the threshold by a clear margin,
+    ("ambiguous", [options]) when two or more are almost equally close,
+    and ("none", None) when nothing is close enough.
+    """
+    query = (raw or "").strip()
+    if not query or not courses:
+        return ("none", None)
+
+    query_norm = _normalize_course_text(query)
+    query_tokens = re.findall(r"[a-z0-9]+", query.casefold())
+
+    scored = []
+    for code, name in courses:
+        code_ratio = difflib.SequenceMatcher(
+            None, query_norm, _normalize_course_text(code)
+        ).ratio()
+        name_ratio = difflib.SequenceMatcher(
+            None, query_norm, _normalize_course_text(name)
+        ).ratio()
+        token_ratio = _token_score(
+            query_tokens, re.findall(r"[a-z0-9]+", name.casefold())
+        )
+        scored.append((max(code_ratio, name_ratio, token_ratio), code, name))
+
+    scored.sort(key=lambda item: -item[0])
+    best_score, best_code, _best_name = scored[0]
+    second_score = scored[1][0] if len(scored) > 1 else 0.0
+
+    if best_score < FUZZY_THRESHOLD:
+        return ("none", None)
+    if best_score - second_score < FUZZY_MARGIN:
+        close = [
+            {"code": code, "name": name}
+            for score, code, name in scored
+            if score >= FUZZY_THRESHOLD and score >= best_score - FUZZY_MARGIN
+        ]
+        return ("ambiguous", close)
+    return ("ok", best_code)
+
+
+def _resolve_course(course_code):
+    """Exact code lookup, then fuzzy; raises ValueError or AmbiguousCourseError."""
+    course = Course.objects.filter(code__iexact=course_code.strip()).first()
+    if course:
+        return course
+    courses = [(c.code, c.name) for c in Course.objects.all()[:300]]
+    status, result = fuzzy_course_candidates(course_code, courses)
+    if status == "ok":
+        return Course.objects.filter(code__iexact=result).first()
+    if status == "ambiguous":
+        raise AmbiguousCourseError(course_code, result)
+    raise ValueError(f"Course with code '{course_code}' not found")
 
 
 def section_name_variants(value: str | None) -> list[str]:
@@ -79,9 +175,7 @@ def resolve_offering(course_code: str, section_name: str, term=None):
     if not term:
         raise ValueError("No active Term found. Admin must set Term.is_active=True")
 
-    course = Course.objects.filter(code__iexact=course_code.strip()).first()
-    if not course:
-        raise ValueError(f"Course with code '{course_code}' not found")
+    course = _resolve_course(course_code)
 
     if not section_name_variants(section_name):
         raise ValueError("Please specify a section, for example 'Section A'.")

@@ -4,11 +4,12 @@ import logging
 import re
 
 from . import experiential_client
+from .utils.resolver import AmbiguousCourseError, fuzzy_course_candidates
 
 SYSTEM = """You are Intelliversity MCP parser. Return ONLY JSON {"tool": "...", "args": {...}}
 Tools:
 WRITES: mark_bulk_attendance(course_code,section,date_str,status,absent_names), add_marks_bulk(course_code,section,assessment_type_code,sequence,total_marks,mode,avg_value), create_departments_bulk(departments), bulk_create_students(csv_text,batch_name,section_name)
-READS: get_attendance_report(course_code,section,date_str), get_defaulters(course_code,section,threshold), get_my_classes_count(), get_marks_report(course_code,section,assessment_type_code,sequence), get_departments(), get_faculty_by_department(department_code), get_curriculum(program_code,batch_name,curriculum_name), get_section_students(section,batch_name), get_offerings(course_code)
+READS: get_attendance_report(course_code,section,date_str), get_defaulters(course_code,section,threshold), get_my_classes_count(), get_marks_report(course_code,section,assessment_type_code,sequence), get_departments(), get_faculty_by_department(department_code), get_curriculum(program_code,batch_name,curriculum_name), get_section_students(section,batch_name), get_offerings(course_code), get_my_cgpa_forecast()
 IMPORTANT:
 - The value of "tool" must be the exact function name from the list above, never a category like READS or WRITES.
 - Return ONLY one JSON object, no markdown, no explanation.
@@ -21,6 +22,9 @@ IMPORTANT:
 - sequence and total_marks are integers. status is "PRESENT" or "ABSENT".
 For "only X and Y are absent rest present" -> mark_bulk_attendance status=PRESENT absent_names=[X,Y]
 For "below 60%" -> get_defaulters threshold=60
+- For "my CGPA forecast" -> get_my_cgpa_forecast (the student's own forecast, no args).
+- For "my course offerings" / "course offerings" -> get_offerings, never get_my_classes_count (that tool is faculty-only).
+- If the user writes a course CODE that is not in the KNOWN COURSES list (a typo like CSC10Z, or a made-up code like XYZQQ), return it EXACTLY as written. Never guess a different code: the server fuzzy-matches it and asks the user to pick when it is ambiguous.
 For "today" -> date_str=today
 """
 
@@ -38,6 +42,7 @@ ALLOWED_TOOLS = {
     "get_curriculum",
     "get_section_students",
     "get_offerings",
+    "get_my_cgpa_forecast",
 }
 
 logger = logging.getLogger(__name__)
@@ -117,12 +122,15 @@ def _course_hint() -> str:
 def _match_course_code(raw: str, courses: list[tuple[str, str]]) -> str | None:
     """Map one spelling of a course onto a real (code, name) pair.
 
-    Pure so it can be unit-tested without a database.
+    Pure so it can be unit-tested without a database. Passes run in order
+    so a stronger match always beats a weaker one: an exact name must beat
+    a coincidental initials match ("Data Structures" is CSC211, not CSC102
+    "Discrete Structures", even though both shorten to DS).
 
-    "PF" / "pf"      -> CS102  (initials of "Programming Fundamentals")
-    "Fundamentals"   -> CS102  (a word of the course name)
-    "Data Structures"-> CS201  (exact name)
-    "CS102"          -> CS102  (exact code)
+    "PF" / "pf"      -> CSC103  (initials of "Programming Fundamentals")
+    "Fundamentals"   -> CSC103  (a word of the course name)
+    "Data Structures"-> CSC211  (exact name)
+    "CS102"          -> CSC102  (exact code)
     """
     if not raw or not courses:
         return None
@@ -132,23 +140,34 @@ def _match_course_code(raw: str, courses: list[tuple[str, str]]) -> str | None:
     if upper in by_code:
         return by_code[upper]
 
+    # Exact name beats everything else (see the DS collision above).
+    for code, name in courses:
+        if upper == name.upper():
+            return code
+
     raw_tokens = set(re.findall(r"[a-z0-9]+", raw.casefold()))
+    if raw_tokens:
+        for code, name in courses:
+            name_folded = {token.casefold() for token in re.findall(r"[A-Za-z0-9]+", name)}
+            if raw_tokens <= name_folded:
+                return code
+
+    # Close spellings ("Programing Fundmentals", "CS 102", "Data Structres").
+    # Ambiguity is handled by _resolve_course_code, not here.
+    status, result = fuzzy_course_candidates(raw, courses)
+    if status == "ok":
+        return result
+
     # "PF" is one token, so take both the whole spelling and the first letter
     # of every word - "PF" must still match initials "PF".
     word_initials = "".join(part[0] for part in re.findall(r"[A-Za-z0-9]+", raw)).upper()
-
     for code, name in courses:
         name_tokens = re.findall(r"[A-Za-z0-9]+", name)
         name_folded = {token.casefold() for token in name_tokens}
         name_initials = "".join(token[0] for token in name_tokens).upper()
-
-        if upper == name.upper():
-            return code
         if name_initials and upper == name_initials:
             return code
         if word_initials and word_initials == name_initials:
-            return code
-        if raw_tokens and raw_tokens <= name_folded:
             return code
         if len(raw_tokens) == 1 and raw_tokens & name_folded:
             return code
@@ -167,7 +186,13 @@ def _resolve_course_code(value: object) -> str | None:
     courses = _load_courses()
     if not courses:
         return raw.upper()
-    return _match_course_code(raw, courses) or raw.upper()
+    matched = _match_course_code(raw, courses)
+    if matched:
+        return matched
+    status, options = fuzzy_course_candidates(raw, courses)
+    if status == "ambiguous":
+        raise AmbiguousCourseError(raw, options)
+    return raw.upper()
 
 
 def _infer_course_from_text(text: str, courses: list[tuple[str, str]] | None = None) -> str | None:
@@ -260,6 +285,36 @@ COURSE_SECTION_TOOLS = {
 def regex_fallback(m: str):
     low = m.lower()
 
+    # Personal reads: "my ..." always means the requester's own data,
+    # never a write and never another student's rows.
+    if "my cgpa" in low or "cgpa forecast" in low or "my forecast" in low:
+        return {"tool": "get_my_cgpa_forecast", "args": {}}
+    if "my attendance" in low:
+        course, section = extract_course_section(m)
+        return {
+            "tool": "get_attendance_report",
+            "args": {
+                "course_code": course,
+                "section": section,
+                "date_str": extract_date_str(m),
+            },
+        }
+    if "my marks" in low:
+        course, section = extract_course_section(m)
+        seq = re.search(r"(quiz|mid|final|assignment)\s*(\d+)", low)
+        return {
+            "tool": "get_marks_report",
+            "args": {
+                "course_code": course,
+                "section": section,
+                "assessment_type_code": seq.group(1).upper() if seq else "QUIZ",
+                "sequence": int(seq.group(2)) if seq else 1,
+            },
+        }
+    if "offering" in low:
+        course, _section = extract_course_section(m)
+        return {"tool": "get_offerings", "args": {"course_code": course}}
+
     if any(x in low for x in [
         "report", "list", "show", "give", "bring", "how many", "below",
         "percentage", "percent", "less than", "under", "defaulter",
@@ -349,6 +404,17 @@ def regex_fallback(m: str):
 
     if any(x in low for x in ["marks", "quiz", "mid", "final"]):
         course, section = extract_course_section(m)
+        if course and "marks for" in low and "add" not in low and "enter" not in low:
+            seq_m = re.search(r"(quiz|mid|final|assignment)\s*(\d+)", low)
+            return {
+                "tool": "get_marks_report",
+                "args": {
+                    "course_code": course,
+                    "section": section,
+                    "assessment_type_code": seq_m.group(1).upper() if seq_m else "QUIZ",
+                    "sequence": int(seq_m.group(2)) if seq_m else 1,
+                },
+            }
         total = re.search(r"out of (\d+)", low)
         seq = re.search(r"quiz\s*(\d+)|mid\s*(\d+)|final", low)
         seq_no = 1
@@ -428,6 +494,8 @@ def _normalize_args(tool: str, args: dict[str, object]) -> dict[str, object]:
                 "final": "FINAL",
                 "assignment": "ASSIGNMENT",
             }.get(kind, kind.upper())
+        elif tool == "get_marks_report":
+            normalized["assessment_type_code"] = "QUIZ"
         if tool == "add_marks_bulk":
             mode = str(normalized.get("mode") or "").strip().lower()
             normalized["mode"] = "average" if mode in {"avg", "average", "mean"} else "random"
@@ -465,7 +533,19 @@ def _finalize(message: str, parsed: dict, context: str = "") -> dict:
     if not isinstance(args, dict):
         args = {}
     if tool in COURSE_SECTION_TOOLS:
-        args = _normalize_course_section(message, args, context)
+        try:
+            args = _normalize_course_section(message, args, context)
+        except AmbiguousCourseError as exc:
+            _course, section = extract_course_section(message)
+            return {
+                "tool": "clarify",
+                "args": {
+                    "options": exc.options,
+                    "matched_text": exc.query,
+                    "section": section,
+                    "message": message,
+                },
+            }
     return {"tool": tool, "args": _normalize_args(tool, args)}
 
 
