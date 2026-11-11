@@ -7,6 +7,7 @@ from apps.academics.views import (
     BatchViewSet,
     CourseViewSet,
     CurriculumViewSet,
+    DashboardStatsView,
     DepartmentViewSet,
     FacultyCourseViewSet,
     ProgramViewSet,
@@ -27,6 +28,7 @@ router.register(r"faculty-courses", FacultyCourseViewSet, basename="faculty-cour
 
 urlpatterns = [
     path("academic-policy/", AcademicPolicyView.as_view(), name="academic-policy"),
+    path("dashboard-stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
 ]
 
 urlpatterns += router.urls

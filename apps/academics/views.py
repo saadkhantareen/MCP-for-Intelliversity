@@ -1,8 +1,13 @@
+from datetime import date
+
+from django.db.models import Count
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.decorators import action
-from rest_framework.permissions import DjangoModelPermissions
+from rest_framework.permissions import DjangoModelPermissions, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from apps.academics.filters import RoleBasedBatchFilter
@@ -34,6 +39,8 @@ from apps.academics.serializers import (
     TermActivateSerializer,
     TermSerializer,
 )
+from apps.enrollments.models import CourseOffering, Enrollment
+from apps.profiles.models import FacultyProfile, StudentProfile
 from apps.profiles.permissions import IsAdmin
 
 
@@ -193,3 +200,101 @@ class SectionViewSet(ModelViewSet):
             queryset = queryset.filter(batch_id=batch_id)
 
         return queryset
+
+
+def build_enrollment_buckets(period, created_dates, today=None):
+    """Group enrollment datetimes into chart buckets for one period.
+
+    ``created_dates`` is an iterable of datetimes (only year/month are
+    used). Returns ``[{"month": label, "value": count}, ...]`` in time
+    order. Buckets with no enrollments are real zeros, not missing data.
+    An unknown period falls back to the last 6 months.
+    """
+    today = today or timezone.now().date()
+    period = period if period in ("6M", "1Y", "All") else "6M"
+
+    if period == "All":
+        years = [d.year for d in created_dates]
+        start_year = min(years) if years else today.year - 4
+        counts = {}
+        for d in created_dates:
+            counts[d.year] = counts.get(d.year, 0) + 1
+        return [
+            {"month": str(year), "value": counts.get(year, 0)}
+            for year in range(start_year, today.year + 1)
+        ]
+
+    months = 6 if period == "6M" else 12
+    label_fmt = "%b" if period == "6M" else "%b %y"
+    # Walk back to the first month of the window.
+    year, month = today.year, today.month
+    for _ in range(months - 1):
+        month -= 1
+        if month == 0:
+            month, year = 12, year - 1
+    counts = {}
+    for d in created_dates:
+        counts[(d.year, d.month)] = counts.get((d.year, d.month), 0) + 1
+    buckets = []
+    for _ in range(months):
+        buckets.append(
+            {
+                "month": date(year, month, 1).strftime(label_fmt),
+                "value": counts.get((year, month), 0),
+            }
+        )
+        month += 1
+        if month == 13:
+            month, year = 1, year + 1
+    return buckets
+
+
+class DashboardStatsView(APIView):
+    """Live counts for the admin dashboard, scoped to the current tenant.
+
+    Read-only, admin only. The dashboard previously showed hardcoded demo
+    numbers; every figure here is counted from this tenant's database, so
+    a tenant with no offerings yet honestly reports 0.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        period = request.query_params.get("period", "6M")
+        departments = Department.objects.all()
+        dept_counts = {
+            row["batch__program__department__name"]: row["n"]
+            for row in StudentProfile.objects.values(
+                "batch__program__department__name"
+            ).annotate(n=Count("id"))
+        }
+        breakdown = [
+            {"name": dept.name, "students": dept_counts.get(dept.name, 0)}
+            for dept in departments.order_by("name")
+        ]
+        # Students whose batch has no department (including no batch at all)
+        # are not inside any department bar; list them instead of dropping
+        # them from the breakdown total.
+        unassigned = StudentProfile.objects.filter(
+            batch__program__department__isnull=True
+        ).count()
+        if unassigned:
+            breakdown.append({"name": "Unassigned", "students": unassigned})
+        enrolled_dates = list(
+            Enrollment.objects.values_list("created_at", flat=True)
+        )
+        return Response(
+            {
+                "students": StudentProfile.objects.count(),
+                "faculty": FacultyProfile.objects.count(),
+                "departments": departments.count(),
+                "programs": Program.objects.count(),
+                "courses": Course.objects.count(),
+                "offerings": CourseOffering.objects.count(),
+                "enrollments": Enrollment.objects.count(),
+                "departments_breakdown": breakdown,
+                "enrollments_by_month": build_enrollment_buckets(
+                    period, enrolled_dates
+                ),
+            }
+        )
