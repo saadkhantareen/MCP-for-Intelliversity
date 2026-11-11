@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 
-from . import agnes_client
+from . import experiential_client
 
 SYSTEM = """You are Intelliversity MCP parser. Return ONLY JSON {"tool": "...", "args": {...}}
 Tools:
@@ -470,17 +470,17 @@ def _finalize(message: str, parsed: dict, context: str = "") -> dict:
 
 
 def parse(message: str, context: str = ""):
-    """Turn free text into {"tool": ..., "args": ...} via the Agnes LLM.
+    """Turn free text into {"tool": ..., "args": ...} via the Experiential Labs LLM.
 
     The regex fallback only runs when the LLM is unreachable or returns
     something unusable - it is a safety net, not the primary path.
     """
-    if not agnes_client.api_key():
-        logger.warning("MCP parse: AGNES_API_KEY missing -> regex_fallback msg=%r", message[:60])
+    if not experiential_client.api_key():
+        logger.warning("MCP parse: EXPERIENTIAL_API_KEY missing -> regex_fallback msg=%r", message[:60])
         return _finalize(message, regex_fallback(message), context)
 
     try:
-        parsed = agnes_client.chat_json(
+        parsed = experiential_client.chat_json(
             [
                 {"role": "system", "content": SYSTEM + _course_hint()},
                 {"role": "user", "content": message},
@@ -488,11 +488,11 @@ def parse(message: str, context: str = ""):
             max_tokens=1024,
         )
         if parsed.get("tool") not in ALLOWED_TOOLS:
-            raise ValueError(f"Unsupported tool returned by {agnes_client.model()}: {parsed}")
+            raise ValueError(f"Unsupported tool returned by {experiential_client.model()}: {parsed}")
 
         result = _finalize(message, parsed, context)
-        logger.info("MCP parse: Agnes OK tool=%s args=%s", result["tool"], result["args"])
+        logger.info("MCP parse: Experiential OK tool=%s args=%s", result["tool"], result["args"])
         return result
     except Exception as exc:
-        logger.warning("MCP parse: Agnes failed (%s) -> regex_fallback msg=%r", exc, message[:60])
+        logger.warning("MCP parse: Experiential failed (%s) -> regex_fallback msg=%r", exc, message[:60])
         return _finalize(message, regex_fallback(message), context)

@@ -81,9 +81,9 @@ class ChatView(APIView):
 
         parsed = parse(message, context=context)
         logger.info(
-            "MCP parse: msg=%r agnes_key_present=%s parsed=%s",
+            "MCP parse: msg=%r experiential_key_present=%s parsed=%s",
             message[:60],
-            bool(os.getenv("AGNES_API_KEY")),
+            bool(os.getenv("EXPERIENTIAL_API_KEY")),
             parsed,
         )
         tool = parsed.get("tool")

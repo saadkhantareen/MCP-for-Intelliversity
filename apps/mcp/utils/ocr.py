@@ -7,6 +7,8 @@ import re
 
 from PIL import Image
 
+from .. import experiential_client
+
 
 def ocr_image_to_text(image_bytes: bytes, sheet_type: str = "attendance") -> str:
     try:
@@ -19,7 +21,7 @@ def ocr_image_to_text(image_bytes: bytes, sheet_type: str = "attendance") -> str
     except Exception as exc:  # pragma: no cover - OCR fallback is best effort
         print("tesseract failed", exc)
 
-    key = agnes_client.api_key()
+    key = experiential_client.api_key()
     if key:
         try:
             b64 = base64.b64encode(image_bytes).decode()
@@ -35,9 +37,9 @@ def ocr_image_to_text(image_bytes: bytes, sheet_type: str = "attendance") -> str
                     "Extract name and marks number only."
                 ),
             }[sheet_type]
-            return agnes_client.vision(prompt, b64, max_tokens=2048)
+            return experiential_client.vision(prompt, b64, max_tokens=2048)
         except Exception as exc:  # pragma: no cover - vision fallback is best effort
-            print("agnes vision failed", exc)
+            print("experiential vision failed", exc)
     return ""
 
 

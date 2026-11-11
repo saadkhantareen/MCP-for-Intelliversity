@@ -152,7 +152,7 @@ def test_parse_without_api_key_uses_regex_path():
     """With no LLM key configured the parser must still answer via regex."""
     saved = {
         name: os.environ.pop(name, None)
-        for name in ("AGNES_API_KEY", "GROQ_API_KEY")
+        for name in ("EXPERIENTIAL_API_KEY", "GROQ_API_KEY")
     }
     try:
         parsed = parse("which of the departments are registered?")
@@ -164,7 +164,7 @@ def test_parse_without_api_key_uses_regex_path():
 
 
 def test_normalize_args_coerces_llm_values():
-    """Agnes may answer naturally ('quiz', 'avg', '2') - tools need typed args."""
+    """The model may answer naturally ('quiz', 'avg', '2') - tools need typed args."""
     from apps.mcp.llm_parser import _normalize_args
 
     args = _normalize_args(
@@ -200,10 +200,10 @@ def test_normalize_args_coerces_llm_values():
     assert _normalize_args("get_defaulters", {"threshold": "60"})["threshold"] == 60
 
 
-def test_parse_with_agnes_key_uses_llm_path():
-    """Live smoke test: only runs when AGNES_API_KEY is configured."""
-    if not os.getenv("AGNES_API_KEY"):
-        print("skip: AGNES_API_KEY not set")
+def test_parse_with_experiential_key_uses_llm_path():
+    """Live smoke test: only runs when EXPERIENTIAL_API_KEY is configured."""
+    if not os.getenv("EXPERIENTIAL_API_KEY"):
+        print("skip: EXPERIENTIAL_API_KEY not set")
         return
     parsed = parse(MARK_QUERY)
     args = parsed["args"]
