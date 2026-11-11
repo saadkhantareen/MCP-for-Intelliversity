@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from apps.academics.faculty_dashboard import FacultyDashboardView
 from apps.academics.views import (
     AcademicPolicyView,
     AcademicYearViewSet,
@@ -29,6 +30,11 @@ router.register(r"faculty-courses", FacultyCourseViewSet, basename="faculty-cour
 urlpatterns = [
     path("academic-policy/", AcademicPolicyView.as_view(), name="academic-policy"),
     path("dashboard-stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path(
+        "faculty-dashboard/",
+        FacultyDashboardView.as_view(),
+        name="faculty-dashboard",
+    ),
 ]
 
 urlpatterns += router.urls
