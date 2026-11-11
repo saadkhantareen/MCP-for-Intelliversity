@@ -4,7 +4,7 @@ import logging
 import re
 
 from . import experiential_client
-from .utils.resolver import AmbiguousCourseError, fuzzy_course_candidates
+from .utils.resolver import AmbiguousCourseError, fuzzy_course_candidates, normalize_section
 
 SYSTEM = """You are Intelliversity MCP parser. Return ONLY JSON {"tool": "...", "args": {...}}
 Tools:
@@ -253,6 +253,12 @@ def _normalize_course_section_base(message: str, args: dict[str, object], contex
             normalized["course_code"] = course
         if section and normalized.get("section") in (None, "", "null"):
             normalized["section"] = section
+
+    # A section must be a real section letter ("A", "B", "A1"). The LLM once
+    # returned "my" as a section ("mark MY today class"), so anything else is
+    # dropped here and the tool infers it from the teacher's own classes.
+    if normalized.get("section") not in (None, "", "null"):
+        normalized["section"] = normalize_section(normalized.get("section"))
 
     # If the page context / LLM / message already provided the values, stop here.
     if normalized.get("course_code") and normalized.get("section"):

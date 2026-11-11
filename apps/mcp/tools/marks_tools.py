@@ -6,7 +6,7 @@ from apps.examinations.models import Assessment, AssessmentType, StudentAssessme
 from apps.enrollments.models import Enrollment
 from apps.profiles.models import StudentProfile
 
-from ..utils.resolver import resolve_offering
+from ..utils.resolver import resolve_offering_for_user
 
 
 @transaction.atomic
@@ -23,12 +23,12 @@ def add_marks_bulk(
     if not (user.is_faculty or user.is_admin):
         raise PermissionError("Only faculty/admin can add marks")
 
-    if not course_code or not section or not assessment_type_code or sequence is None or total_marks is None:
+    if not assessment_type_code or sequence is None or total_marks is None:
         raise ValueError(
-            "Please specify course code, section, assessment type, sequence number, and total marks."
+            "Please specify assessment type, sequence number, and total marks."
         )
 
-    offering, _term = resolve_offering(course_code, section)
+    offering, _term = resolve_offering_for_user(user, course_code, section)
     atype = AssessmentType.objects.filter(code__iexact=assessment_type_code).first()
     if not atype:
         atype = AssessmentType.objects.create(name=assessment_type_code, code=assessment_type_code.upper())
@@ -91,14 +91,14 @@ def add_marks_from_ocr_rows(
     if not (user.is_faculty or user.is_admin):
         raise PermissionError("Only faculty/admin can add marks")
 
-    if not course_code or not section or not assessment_type_code or sequence is None or total_marks is None:
+    if not assessment_type_code or sequence is None or total_marks is None:
         raise ValueError(
-            "Please specify course code, section, assessment type, sequence number, and total marks."
+            "Please specify assessment type, sequence number, and total marks."
         )
 
     ocr_rows = ocr_rows or []
 
-    offering, _term = resolve_offering(course_code, section)
+    offering, _term = resolve_offering_for_user(user, course_code, section)
     atype = AssessmentType.objects.filter(code__iexact=assessment_type_code).first()
     if not atype:
         atype = AssessmentType.objects.create(name=assessment_type_code, code=assessment_type_code.upper())

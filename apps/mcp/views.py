@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .classifier import classify_message
 from .llm_parser import extract_course_section, parse
 from .roles import is_tool_allowed, role_refusal
 from .suggestions import get_suggestions
@@ -49,6 +50,28 @@ def _clarify_response(args, suggestions):
             },
             "suggestions": suggestions,
         }
+    )
+
+
+def _assistant_short_name(request):
+    """'FAST University' -> 'FAST', for the greeting reply."""
+    uni = getattr(request, "university", None)
+    name = (getattr(uni, "name", "") or "").strip()
+    short = re.sub(r"\s+university\s*$", "", name, flags=re.I).strip()
+    return short or "Intelliversity"
+
+
+def _friendly_reply(kind, request):
+    """Small-talk answer: a greeting never reaches the tool parser."""
+    name = _assistant_short_name(request)
+    if kind == "thanks":
+        return "You're welcome! Anything else I can help with?"
+    if kind == "farewell":
+        return "Goodbye! Come back any time you need attendance, marks or reports."
+    return (
+        f"Hi! I am {name} AI Assistant. How can I help you?\n"
+        "I can mark attendance, check marks, show CGPA forecasts and pull reports, "
+        "just tell me what you need."
     )
 
 
@@ -113,18 +136,34 @@ class ChatView(APIView):
                     {"options": exc.options, "matched_text": exc.query, "section": section, "message": message},
                     suggestions,
                 )
-            except Exception as exc:
-                return Response({"reply": f"Error: {exc}", "suggestions": suggestions}, status=400)
+            except ValueError as exc:
+                return Response({"reply": str(exc), "suggestions": suggestions}, status=400)
+            except Exception:
+                logger.exception("MCP image chat failed")
+                return Response(
+                    {"reply": "Sorry, something went wrong on my side. Please try again.", "suggestions": suggestions},
+                    status=400,
+                )
 
         if not message:
             return Response({"error": "message or image required"}, status=400)
 
         suggestions = get_suggestions(request.user)
+
+        # Greetings and small talk never reach the tool parser: "hi" used to
+        # come back as a class list. Answer as the assistant instead.
+        kind = classify_message(message)
+        if kind != "functional":
+            return Response({"reply": _friendly_reply(kind, request), "suggestions": suggestions})
+
         try:
             parsed = parse(message, context=context)
-        except Exception as exc:
+        except Exception:
             logger.exception("MCP parse failed")
-            return Response({"reply": f"Error: {exc}", "suggestions": suggestions}, status=400)
+            return Response(
+                {"reply": "Sorry, I couldn't understand that. Please try again.", "suggestions": suggestions},
+                status=400,
+            )
         logger.info(
             "MCP parse: msg=%r experiential_key_present=%s parsed=%s",
             message[:60],
@@ -168,5 +207,16 @@ class ChatView(APIView):
                 {"options": exc.options, "matched_text": exc.query, "section": args.get("section"), "message": message},
                 suggestions,
             )
-        except Exception as exc:
-            return Response({"reply": f"Error: {exc}", "tool": tool, "suggestions": suggestions}, status=400)
+        except ValueError as exc:
+            # Tool guidance ("Which section ...?") is written for the user.
+            return Response({"reply": str(exc), "tool": tool, "suggestions": suggestions}, status=400)
+        except Exception:
+            logger.exception("MCP tool failed tool=%s args=%s", tool, args)
+            return Response(
+                {
+                    "reply": "Sorry, something went wrong on my side. Please try again, or do it from the relevant page.",
+                    "tool": tool,
+                    "suggestions": suggestions,
+                },
+                status=400,
+            )

@@ -6,7 +6,7 @@ from apps.enrollments.models import CourseOffering, Enrollment
 from apps.examinations.models import Assessment, AssessmentType, StudentAssessment
 from apps.profiles.models import FacultyProfile, StudentProfile
 
-from ..utils.resolver import parse_date, resolve_offering, section_q
+from ..utils.resolver import parse_date, resolve_offering, resolve_offering_for_user, section_q
 
 
 def _student_profile(user):
@@ -52,9 +52,7 @@ def get_attendance_report(user, course_code: str | None = None, section: str | N
             }
             if len(sections) == 1:
                 section = sections.pop()
-    if not course_code or not section:
-        raise ValueError("Please specify both course code and section, for example: PF Section A.")
-    offering, _term = resolve_offering(course_code, section)
+    offering, _term = resolve_offering_for_user(user, course_code, section)
     target_date = parse_date(date_str)
     session = ClassSession.objects.filter(course_offering=offering, session_date=target_date).first()
     if not session:
@@ -171,9 +169,9 @@ def get_marks_report(
             }
             if len(sections) == 1:
                 section = sections.pop()
-    if not course_code or not section or not assessment_type_code or sequence is None:
-        raise ValueError("Please specify course code, section, assessment type, and sequence number.")
-    offering, _term = resolve_offering(course_code, section)
+    if not assessment_type_code or sequence is None:
+        raise ValueError("Please specify assessment type and sequence number.")
+    offering, _term = resolve_offering_for_user(user, course_code, section)
     assessment_type = AssessmentType.objects.filter(code__iexact=assessment_type_code).first()
     if not assessment_type:
         return {"message": f"No assessment type {assessment_type_code}", "data": []}

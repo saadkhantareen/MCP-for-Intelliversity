@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.academics.models import Course, Term
+from apps.enrollments.choices import AssignmentStatus
 from apps.enrollments.models import CourseOffering
 
 
@@ -191,3 +192,109 @@ def resolve_offering(course_code: str, section_name: str, term=None):
             f"No CourseOffering for {course_code} Section {section_name} in active term {term.name}"
         )
     return offering, term
+
+
+_SECTION_RE = re.compile(r"^[A-Za-z][0-9]?$")
+
+_GENERIC_SECTIONS = {
+    # NOTE: "a" is deliberately absent: section A is real, and the shape
+    # check above (one letter + optional digit) already rules out articles.
+    "my", "today", "tomorrow", "yesterday", "class", "course", "the",
+    "an", "this", "that", "it", "for", "your", "our", "their", "section",
+    "sec", "all", "please",
+}
+
+
+def normalize_section(value: str | None) -> str | None:
+    """Canonical section letter, or None when the value cannot be a section.
+
+    The LLM once returned "my" as a section ("mark MY today class"), so a
+    section must be a single letter with an optional digit ("A", "B", "A1").
+    "Section A" is accepted and reduced to "A".
+    """
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    bare = re.sub(r"^section[ _-]*", "", raw, flags=re.I).strip()
+    if not _SECTION_RE.fullmatch(bare):
+        return None
+    if bare.casefold() in _GENERIC_SECTIONS:
+        return None
+    return bare.upper()
+
+
+def _offering_label(offering):
+    """'Section A' for display, whether the DB stores 'A' or 'Section A'."""
+    label = offering.section.name
+    return label if label.lower().startswith("section") else f"Section {label}"
+
+
+def _approved_offerings_for_user(user, term):
+    """The user's APPROVED faculty assignments in one term, all courses."""
+    from apps.profiles.models import FacultyProfile
+
+    faculty = FacultyProfile.objects.filter(base_profile__user=user).first()
+    if faculty is None:
+        return []
+    return list(
+        CourseOffering.objects.filter(
+            term=term,
+            faculty_assignments__faculty=faculty,
+            faculty_assignments__status=AssignmentStatus.APPROVED,
+        ).select_related("section", "course", "term")
+    )
+
+
+def _approved_offerings_for_course(user, course, term):
+    """The user's APPROVED faculty assignments for one course in one term."""
+    return [
+        offering
+        for offering in _approved_offerings_for_user(user, term)
+        if offering.course_id == course.id
+    ]
+
+
+def resolve_offering_for_user(user, course_code: str | None = None, section_name: str | None = None, term=None):
+    """Resolve an offering, inferring course and section when the teacher has one.
+
+    - Course and section given (and plausible): same as resolve_offering.
+    - No course mentioned and the teacher has exactly one approved offering
+      this term: that is "my class", so use it.
+    - No course and they teach several classes: ask which one, naming them.
+    - Section missing and the teacher has exactly one approved offering for
+      the course this term: use it, so "mark my today class ..." just works.
+    - Section missing and they teach several sections: ask which one, naming
+      them, instead of a bare "specify a section" error.
+    - Admins and anyone without an approved assignment: ask for the details.
+    """
+    term = term or Term.objects.filter(is_active=True).first()
+    if not term:
+        raise ValueError("No active Term found. Admin must set Term.is_active=True")
+    if not course_code:
+        offerings = _approved_offerings_for_user(user, term)
+        if len(offerings) == 1:
+            return offerings[0], term
+        if not offerings:
+            raise ValueError(
+                "Which course? Tell me the course and section, for example 'PF Section A'."
+            )
+        names = ", ".join(_offering_label(offering) for offering in offerings)
+        raise ValueError(f"Which class? You teach {names}.")
+    course = _resolve_course(course_code)
+    section = normalize_section(section_name)
+    if section_name and not section:
+        raise ValueError(
+            "I couldn't tell which section you meant. Please say the section, for example 'Section A'."
+        )
+    if section:
+        return resolve_offering(course_code, section, term=term)
+    offerings = _approved_offerings_for_course(user, course, term)
+    if len(offerings) == 1:
+        return offerings[0], term
+    if not offerings:
+        raise ValueError(
+            f"You don't teach {course.code} this term. "
+            "Please say the course and section, for example 'PF Section A'."
+        )
+    names = ", ".join(_offering_label(offering) for offering in offerings)
+    raise ValueError(f"Which section of {course.code}? You teach {names}.")
